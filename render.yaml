@@ -5,7 +5,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install --force
+    buildCommand: npm install --force --legacy-peer-deps
     startCommand: npm start
     rootDir: backend
     envVars:
@@ -25,7 +25,7 @@ services:
     name: billeasy-frontend
     runtime: static
     plan: free
-    buildCommand: npm install --force && npm run build
+    buildCommand: npm install --force --legacy-peer-deps && npm run build
     publishDir: dist
     rootDir: frontend
     envVars:
@@ -41,7 +41,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install --force
+    buildCommand: npm install --force --legacy-peer-deps
     startCommand: npm start
     rootDir: admin/backend
     envVars:
@@ -65,7 +65,7 @@ services:
     name: billeasy-admin-frontend
     runtime: static
     plan: free
-    buildCommand: npm install --force && npm run build
+    buildCommand: npm install --force --legacy-peer-deps && npm run build
     publishDir: dist
     rootDir: admin/frontend
     envVars:

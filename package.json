@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node railway-monorepo.js",
-    "install-all": "npm install --force --prefix backend && npm install --force --prefix admin/backend",
+    "install-all": "npm install --force --legacy-peer-deps --prefix backend && npm install --force --legacy-peer-deps --prefix admin/backend",
     "postinstall": "npm run install-all"
   },
   "dependencies": {
