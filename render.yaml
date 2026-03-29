@@ -1,12 +1,12 @@
 services:
-  # 1. Main Backend Web Service (Uses Yarn)
+  # 1. Main Backend Web Service
   - type: web
     name: billeasy-backend
     runtime: node
     plan: free
     region: oregon
-    buildCommand: yarn install
-    startCommand: yarn start
+    buildCommand: npm install --force
+    startCommand: npm start
     rootDir: backend
     envVars:
       - key: NODE_VERSION
@@ -20,12 +20,12 @@ services:
       - key: NODE_ENV
         value: production
 
-  # 2. Main Frontend Static Site (Uses NPM with legacy-peer-deps)
+  # 2. Main Frontend Static Site
   - type: static
     name: billeasy-frontend
     runtime: static
     plan: free
-    buildCommand: npm install --legacy-peer-deps && npm run build
+    buildCommand: npm install --force && npm run build
     publishDir: dist
     rootDir: frontend
     envVars:
@@ -35,13 +35,13 @@ services:
           name: billeasy-backend
           property: host
 
-  # 3. Admin Backend Web Service (Uses NPM)
+  # 3. Admin Backend Web Service
   - type: web
     name: billeasy-admin-backend
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install --legacy-peer-deps
+    buildCommand: npm install --force
     startCommand: npm start
     rootDir: admin/backend
     envVars:
@@ -60,12 +60,12 @@ services:
       - key: NODE_ENV
         value: production
 
-  # 4. Admin Frontend Static Site (Uses NPM)
+  # 4. Admin Frontend Static Site
   - type: static
     name: billeasy-admin-frontend
     runtime: static
     plan: free
-    buildCommand: npm install --legacy-peer-deps && npm run build
+    buildCommand: npm install --force && npm run build
     publishDir: dist
     rootDir: admin/frontend
     envVars:
