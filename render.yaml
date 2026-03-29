@@ -31,6 +31,10 @@ services:
     envVars:
       - key: VITE_BACKEND_URL
         value: https://billeasy-backend.onrender.com # Update this if your backend service name is different
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
   # 3. Admin Backend Web Service
   - type: web
     name: billeasy-admin-backend
@@ -69,6 +73,10 @@ services:
         value: https://billeasy-admin-backend.onrender.com # Update this if your admin backend name is different
       - key: VITE_ADMIN_SECRET
         value: developer_secret_key_2026
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
 
 databases:
   # Unified Render PostgreSQL Database
