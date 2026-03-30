@@ -20,11 +20,9 @@ const api = axios.create({
 const AdminApp = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('admin_token'));
   const [showLogin, setShowLogin] = useState(!isAuthenticated);
-  const [showOtpScreen, setShowOtpScreen] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   
   const [loginForm, setLoginForm] = useState({ identifier: '', password: '' });
-  const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -51,24 +49,12 @@ const AdminApp = () => {
     }
   }, [isAuthenticated]);
 
-  const handleRequestOtp = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE_URL}/auth/request-otp`, { identifier: loginForm.identifier });
-      setShowOtpScreen(true);
-      alert('OTP sent to your log! (Check console for dev purposes)');
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to request OTP');
-    }
-  };
-
-  const handleVerifyLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post(`${API_BASE_URL}/auth/verify-login`, {
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, {
         identifier: loginForm.identifier,
-        password: loginForm.password,
-        otp
+        password: loginForm.password
       });
       
       localStorage.setItem('admin_token', res.data.token);
@@ -82,7 +68,7 @@ const AdminApp = () => {
         window.location.reload(); // Refresh to set headers correctly in axios instance
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Verification failed');
+      alert(err.response?.data?.error || 'Login failed');
     }
   };
 
@@ -244,56 +230,37 @@ const AdminApp = () => {
             <p className="text-slate-500 text-xs font-bold mt-2">Prashanth's Developer Control</p>
           </div>
 
-          {!showOtpScreen ? (
-            <form onSubmit={handleRequestOtp} className="space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Email or Mobile</label>
-                <div className="relative">
-                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                  <input 
-                    required
-                    type="text" 
-                    value={loginForm.identifier}
-                    onChange={e => setLoginForm({...loginForm, identifier: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-3 text-white font-bold focus:border-indigo-500 outline-none transition-all"
-                    placeholder="pachu.mgd@gmail.com"
-                  />
-                </div>
-              </div>
-              <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-indigo-900/50">REQUEST OTP</button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyLogin} className="space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Security Password</label>
-                <div className="relative">
-                  <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                  <input 
-                    required
-                    type="password" 
-                    value={loginForm.password}
-                    onChange={e => setLoginForm({...loginForm, password: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-3 text-white font-bold focus:border-indigo-500 outline-none transition-all"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">6-Digit OTP</label>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Email or Mobile</label>
+              <div className="relative">
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                 <input 
                   required
                   type="text" 
-                  maxLength="6"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-black text-center text-2xl tracking-[1em] focus:border-indigo-500 outline-none transition-all"
-                  placeholder="000000"
+                  value={loginForm.identifier}
+                  onChange={e => setLoginForm({...loginForm, identifier: e.target.value})}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-3 text-white font-bold focus:border-indigo-500 outline-none transition-all"
+                  placeholder="pachu.mgd@gmail.com"
                 />
               </div>
-              <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-indigo-900/50">VERIFY & LOGIN</button>
-              <button type="button" onClick={() => setShowOtpScreen(false)} className="w-full text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors">Go Back</button>
-            </form>
-          )}
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Security Password</label>
+              <div className="relative">
+                <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <input 
+                  required
+                  type="password" 
+                  value={loginForm.password}
+                  onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-3 text-white font-bold focus:border-indigo-500 outline-none transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-indigo-900/50">AUTHORIZE ACCESS</button>
+          </form>
         </div>
       </div>
     );

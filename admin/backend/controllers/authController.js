@@ -6,6 +6,46 @@ const { Op } = require('sequelize');
 const ADMIN_EMAIL = 'pachu.mgd@gmail.com';
 const ADMIN_PHONE = '9986995848';
 
+exports.login = async (req, res) => {
+  const { identifier, password } = req.body;
+
+  if (identifier !== ADMIN_EMAIL && identifier !== ADMIN_PHONE) {
+    return res.status(403).json({ error: "Unauthorized user" });
+  }
+
+  // Ensure Admin user exists
+  let admin = await AdminUser.findOne({ where: { email: ADMIN_EMAIL } });
+  if (!admin) {
+    const hashedPassword = await bcrypt.hash('admin123', 10); // Default temp password
+    admin = await AdminUser.create({
+      email: ADMIN_EMAIL,
+      phone: ADMIN_PHONE,
+      password: hashedPassword
+    });
+  }
+
+  const isMatch = await bcrypt.compare(password, admin.password);
+  if (!isMatch) {
+    return res.status(400).json({ error: "Invalid password" });
+  }
+
+  // Check if password reset is needed (30 days)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const needsReset = admin.last_password_reset < thirtyDaysAgo;
+
+  const token = jwt.sign(
+    { id: admin.id, role: 'admin' },
+    process.env.JWT_SECRET || 'admin_secret_key',
+    { expiresIn: '24h' }
+  );
+
+  res.json({
+    token,
+    needsReset,
+    message: needsReset ? "Password reset required (30 days policy)" : "Login successful"
+  });
+};
+
 exports.requestOTP = async (req, res) => {
   const { identifier } = req.body; // email or phone
 

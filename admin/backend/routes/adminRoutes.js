@@ -25,6 +25,7 @@ const authMiddleware = (req, res, next) => {
 };
 
 // Public Auth Routes
+router.post('/auth/login', authController.login);
 router.post('/auth/request-otp', authController.requestOTP);
 router.post('/auth/verify-login', authController.verifyOTPAndLogin);
 
