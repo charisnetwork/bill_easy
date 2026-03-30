@@ -35,6 +35,51 @@ const AdminApp = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [couponAnalytics, setCouponAnalytics] = useState(null);
+
+  // Modal states
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [showAffiliateModal, setShowAffiliateModal] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+
+  const [couponForm, setCouponForm] = useState({
+    code: '',
+    discount_type: 'percentage',
+    discount_value: 0,
+    expiry_date: '',
+    usage_limit: 100,
+    company_id: ''
+  });
+
+  const [affiliateForm, setAffiliateForm] = useState({
+    company_name: '',
+    contact_person: '',
+    email: '',
+    mobile_no: ''
+  });
+
+  const [planForm, setPlanForm] = useState({
+    id: '',
+    plan_name: '',
+    price: 0,
+    billing_cycle: 'monthly',
+    is_active: true
+  });
+
+  const ALL_FEATURES = [
+    { id: 'gst_billing', label: 'GST Invoicing' },
+    { id: 'inventory_management', label: 'Inventory Management' },
+    { id: 'reports', label: '25+ Reports' },
+    { id: 'quotations', label: 'Quotations & Estimates' },
+    { id: 'eway_bills', label: 'E-way Bills' },
+    { id: 'staff_attendance_payroll', label: 'Staff Attendance & Payroll' },
+    { id: 'multi_godowns', label: 'Multiple Godowns/Warehouses' },
+    { id: 'manage_businesses', label: 'Manage Multiple Businesses' },
+    { id: 'user_activity_tracker', label: 'User Activity Tracker' },
+    { id: 'priority_support', label: 'Priority Support' },
+  ];
+
   // Authenticated API instance
   const authApi = React.useMemo(() => axios.create({
     baseURL: API_BASE_URL,
