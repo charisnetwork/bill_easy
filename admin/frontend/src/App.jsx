@@ -36,10 +36,10 @@ const AdminApp = () => {
   const [loading, setLoading] = useState(true);
 
   // Authenticated API instance
-  const authApi = axios.create({
+  const authApi = React.useMemo(() => axios.create({
     baseURL: API_BASE_URL,
     headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-  });
+  }), [isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated) {
