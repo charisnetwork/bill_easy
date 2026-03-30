@@ -45,7 +45,14 @@ app.use(
 
 app.use(
   cors({
-    origin: '*',
+    origin: [
+      'https://charisbilleasy.store', 
+      'https://admin.charisbilleasy.store',
+      'https://billeasy-frontend.onrender.com',
+      'https://billeasy-admin-frontend.onrender.com',
+      'http://localhost:3000',
+      'http://localhost:3021'
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id'],
     credentials: true
