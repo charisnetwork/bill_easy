@@ -16,6 +16,7 @@ import {
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { user } = useAuth();
+  const [submitted, setSubmitted] = React.useState(false);
 
   return (
     <footer className="bg-slate-900 text-slate-300 py-12 px-6 mt-auto print:hidden">
@@ -64,52 +65,69 @@ const Footer = () => {
           {/* Quick Enquiry Section */}
           <div className="space-y-4">
             <h4 className="text-white font-bold uppercase tracking-wider text-xs">Quick Enquiry</h4>
-            <form 
-              className="space-y-3"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const data = {
-                  name: formData.get('name'),
-                  phone: formData.get('phone'),
-                  message: 'Quick callback request from footer'
-                };
-                try {
-                  const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/enquiries`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                  });
-                  if (response.ok) {
-                    alert('Request sent successfully!');
-                    e.target.reset();
+            {submitted ? (
+              <div className="bg-blue-600/10 border border-blue-500/20 rounded-xl p-4 animate-in fade-in zoom-in duration-300">
+                <p className="text-xs font-bold text-blue-400 leading-relaxed text-center">
+                  Thank you for contacting Bill Easy. Our executive will get in touch with you shortly.
+                </p>
+                <button 
+                  onClick={() => setSubmitted(false)}
+                  className="w-full mt-3 text-[10px] uppercase font-black text-slate-500 hover:text-white transition-colors underline"
+                >
+                  Send another
+                </button>
+              </div>
+            ) : (
+              <form 
+                className="space-y-3"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const data = {
+                    name: formData.get('name'),
+                    phone: formData.get('phone'),
+                    message: 'Quick callback request from footer'
+                  };
+                  try {
+                    const response = await fetch('https://billeasy-backend.onrender.com/api/enquiries', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(data)
+                    });
+                    if (response.ok) {
+                      setSubmitted(true);
+                      e.target.reset();
+                    } else {
+                      alert('Failed to send. Please try again.');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert('Connectivity issue. Please check your internet.');
                   }
-                } catch (err) {
-                  console.error(err);
-                }
-              }}
-            >
-              <input 
-                name="name"
-                type="text" 
-                placeholder="Your Name" 
-                required
-                className="w-full bg-slate-800 border-none rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-white"
-              />
-              <input 
-                name="phone"
-                type="tel" 
-                placeholder="Phone Number" 
-                required
-                className="w-full bg-slate-800 border-none rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-white"
-              />
-              <button 
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs transition-colors shadow-lg shadow-blue-900/20"
+                }}
               >
-                Request Callback
-              </button>
-            </form>
+                <input 
+                  name="name"
+                  type="text" 
+                  placeholder="Your Name" 
+                  required
+                  className="w-full bg-slate-800 border-none rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-white"
+                />
+                <input 
+                  name="phone"
+                  type="tel" 
+                  placeholder="Phone Number" 
+                  required
+                  className="w-full bg-slate-800 border-none rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-white"
+                />
+                <button 
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs transition-colors shadow-lg shadow-blue-900/20"
+                >
+                  Request Callback
+                </button>
+              </form>
+            )}
           </div>
 
           {/* Reach Us */}
