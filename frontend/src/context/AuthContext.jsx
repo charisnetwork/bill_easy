@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
-
-const API_URL = 'https://billeasy-backend.onrender.com/api';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -22,36 +21,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(() => localStorage.getItem('token'));
 
-  // Create API instance with interceptors to always use current token
-  const api = useMemo(() => {
-    const instance = axios.create({
-      baseURL: API_URL
-    });
-
-    instance.interceptors.request.use((config) => {
-      const currentToken = localStorage.getItem('token');
-      if (currentToken) {
-        config.headers.Authorization = `Bearer ${currentToken}`;
-      }
-      return config;
-    });
-
-    instance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('token');
-          setToken(null);
-          setUser(null);
-          setCompany(null);
-          setSubscription(null);
-        }
-        return Promise.reject(error);
-      }
-    );
-
-    return instance;
-  }, []);
+  // The 'api' instance is now imported from ../services/api
 
   const fetchProfile = useCallback(async () => {
     const currentToken = localStorage.getItem('token');
@@ -79,9 +49,12 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, []);
 
   useEffect(() => {
+    // Add interceptor once to the shared instance if needed
+    // Note: api.jsx already has some interceptors, we can augment them here if we want
+    // but importing the shared instance is the priority for consolidation.
     fetchProfile();
   }, [fetchProfile]);
 

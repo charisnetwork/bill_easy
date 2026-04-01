@@ -78,11 +78,19 @@ Deploy as two separate projects on Vercel:
 
 ---
 
-## Building and Running
+## Production Readiness Checklist (Completed April 2026)
 
-### Prerequisites
-- Node.js (v18+)
-- PostgreSQL database
+- [x] **Persistent Asset Storage:** Refactored `uploadService.js` to use Cloudinary. This prevents data loss on Render's ephemeral filesystem.
+- [x] **Dynamic CORS Configuration:** Externalized allowed origins to `ALLOWED_ORIGINS` environment variable in both main and admin backends.
+- [x] **Unified Frontend API:** Consolidated Axios instances and implemented `VITE_BACKEND_URL` environment variables in the frontend.
+- [x] **Production Dependency Management:** Added `cloudinary` and `multer-storage-cloudinary` to backend packages.
+
+### Required Environment Variables for Render.com:
+- `DATABASE_URL`: Main PostgreSQL connection string.
+- `JWT_SECRET`: Random secure string.
+- `CLOUDINARY_URL`: Cloudinary connection string (e.g., `cloudinary://api_key:api_secret@cloud_name`).
+- `ALLOWED_ORIGINS`: Comma-separated list of domains (e.g., `https://charisbilleasy.store,https://admin.charisbilleasy.store`).
+- `VITE_BACKEND_URL`: `https://your-backend-url.onrender.com/api`.
 
 ### Backend Setup
 1. `cd backend`

@@ -11,13 +11,24 @@ const PORT = process.env.PORT || 3025;
 
 // Robust CORS Configuration
 app.use(cors({
-  origin: [
-    'https://admin.charisbilleasy.store', 
-    'https://charisbilleasy.store',
-    'https://billeasy-admin-frontend.onrender.com', 
-    'https://billeasy-frontend.onrender.com',
-    'http://localhost:3021'
-  ],
+  origin: (origin, callback) => {
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',') 
+      : [
+        'https://admin.charisbilleasy.store', 
+        'https://charisbilleasy.store',
+        'https://billeasy-admin-frontend.onrender.com', 
+        'https://billeasy-frontend.onrender.com',
+        'http://localhost:3021'
+      ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS Admin] Rejected: ${origin}`);
+      callback(null, false); // Fail silently for some clients or send error
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
   optionsSuccessStatus: 200

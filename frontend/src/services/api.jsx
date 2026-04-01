@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://billeasy-backend.onrender.com/api';
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'https://billeasy-backend.onrender.com/api';
 
 const getToken = () => localStorage.getItem('token');
 

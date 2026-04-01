@@ -45,14 +45,25 @@ app.use(
 
 app.use(
   cors({
-    origin: [
-      'https://charisbilleasy.store', 
-      'https://admin.charisbilleasy.store',
-      'https://billeasy-frontend.onrender.com',
-      'https://billeasy-admin-frontend.onrender.com',
-      'http://localhost:3000',
-      'http://localhost:3021'
-    ],
+    origin: (origin, callback) => {
+      const allowedOrigins = process.env.ALLOWED_ORIGINS 
+        ? process.env.ALLOWED_ORIGINS.split(',') 
+        : [
+          'https://charisbilleasy.store', 
+          'https://admin.charisbilleasy.store',
+          'https://billeasy-frontend.onrender.com',
+          'https://billeasy-admin-frontend.onrender.com',
+          'http://localhost:3000',
+          'http://localhost:3021'
+        ];
+      
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`[CORS] Rejected: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id'],
     credentials: true
