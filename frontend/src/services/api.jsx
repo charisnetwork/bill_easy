@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// Force absolute URL for production to prevent relative path issues on charisbilleasy.store
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'https://billeasy-backend.onrender.com';
 const API_URL = `${BASE_URL}/api`;
 
@@ -13,7 +14,8 @@ export { BASE_URL, API_URL };
 
 api.interceptors.request.use((config) => {
   const token = getToken();
-  if (token) {
+  // Only add header if token is valid and not 'undefined' string
+  if (token && token !== 'undefined' && token !== 'null') {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -24,7 +26,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Prevent infinite redirect loops if already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
