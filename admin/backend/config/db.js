@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const saasSequelize = require('../../../backend/config/database');
 require('dotenv').config();
 
 const dialectOptions = {
@@ -8,26 +9,26 @@ const dialectOptions = {
   }
 };
 
-const saasDB = new Sequelize(process.env.DATABASE_URL || process.env.DATABASE_URL_SaaS, {
-  dialect: 'postgres',
-  logging: false,
-  define: {
-    freezeTableName: true,
-    underscored: true,
-    timestamps: true
-  },
-  dialectOptions
-});
+const saasDB = saasSequelize;
 
-const adminDB = new Sequelize(process.env.DATABASE_URL_ADMIN || process.env.DATABASE_URL, {
-  dialect: 'postgres',
-  logging: false,
-  define: {
-    freezeTableName: true,
-    underscored: true,
-    timestamps: true
-  },
-  dialectOptions
-});
+let adminDB;
+const saasUrl = process.env.DATABASE_URL || process.env.DATABASE_URL_SaaS;
+const adminUrl = process.env.DATABASE_URL_ADMIN || process.env.DATABASE_URL;
+
+// If they are the same URL, reuse the connection instance
+if (adminUrl === saasUrl) {
+  adminDB = saasSequelize;
+} else {
+  adminDB = new Sequelize(adminUrl, {
+    dialect: 'postgres',
+    logging: false,
+    define: {
+      freezeTableName: true,
+      underscored: true,
+      timestamps: true
+    },
+    dialectOptions
+  });
+}
 
 module.exports = { saasDB, adminDB };

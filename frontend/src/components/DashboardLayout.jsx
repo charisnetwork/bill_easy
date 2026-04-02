@@ -395,6 +395,19 @@ export const DashboardLayout = ({ children }) => {
                     </div>
                   </DropdownMenuItem>
 
+                  {user?.email === 'pachu.mgd@gmail.com' && (
+                    <DropdownMenuItem 
+                      onClick={() => window.open('https://admin.charisbilleasy.store', '_blank')}
+                      className="rounded-lg py-2.5 cursor-pointer text-indigo-600 focus:text-indigo-700 focus:bg-indigo-50"
+                    >
+                      <Shield className="w-4 h-4 mr-3" />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">Platform Admin</span>
+                        <span className="text-[10px] text-indigo-400">Developer Control Center</span>
+                      </div>
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuSeparator className="my-2" />
 
                   <DropdownMenuItem

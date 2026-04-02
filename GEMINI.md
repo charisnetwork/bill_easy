@@ -84,6 +84,8 @@ Deploy as two separate projects on Vercel:
 - [x] **Dynamic CORS Configuration:** Externalized allowed origins to `ALLOWED_ORIGINS` environment variable in both main and admin backends.
 - [x] **Unified Frontend API:** Consolidated Axios instances and implemented `VITE_BACKEND_URL` environment variables in the frontend.
 - [x] **Production Dependency Management:** Added `cloudinary` and `multer-storage-cloudinary` to backend packages.
+- [x] **Admin-SaaS Connection:** Unified database connections and shared models between `/backend` and `/admin/backend` to ensure data consistency and reduce redundancy.
+- [x] **Platform Admin Access:** Implemented a secure "Platform Admin" portal link in the main SaaS dashboard for authorized developers (pachu.mgd@gmail.com).
 
 ## Subscription Plan Enforcement
 
