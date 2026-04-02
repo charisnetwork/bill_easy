@@ -94,9 +94,8 @@ exports.deleteAffiliate = async (req, res) => {
 // GET /admin/coupons
 exports.getCoupons = async (req, res) => {
   try {
-    // We fetch coupons first. 
     const coupons = await Coupon.findAll({ 
-      order: [['created_at', 'DESC']] 
+      order: [['createdAt', 'DESC']] 
     });
 
     const detailedCoupons = await Promise.all(coupons.map(async (coupon) => {
@@ -115,7 +114,7 @@ exports.getCoupons = async (req, res) => {
       const couponData = coupon.toJSON();
       return {
         ...couponData,
-        createdAt: couponData.created_at || couponData.createdAt,
+        createdAt: couponData.createdAt || couponData.created_at,
         affiliate,
         usage_count: usageCount,
         revenue_generated: revenueGenerated,
@@ -134,7 +133,6 @@ exports.getCoupons = async (req, res) => {
 exports.createCoupon = async (req, res) => {
   try {
     const data = { ...req.body };
-    // Frontend sends company_id as the affiliate identifier in the modal
     if (data.company_id) {
       data.affiliate_id = data.company_id;
       delete data.company_id;

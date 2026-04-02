@@ -40,8 +40,47 @@ app.options('(.*)', cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Debug Route (Public for troubleshooting)
+app.get('/api/debug-db', async (req, res) => {
+  try {
+    const { Subscription, Company, Plan, Coupon } = require('./models/saasModels');
+    const { Affiliate, AdminUser } = require('./models/adminModels');
+    
+    const stats = {
+      timestamp: new Date().toISOString(),
+      saas_database: {
+        subscriptions: await Subscription.count(),
+        companies: await Company.count(),
+        plans: await Plan.count(),
+        coupons: await Coupon.count()
+      },
+      admin_database: {
+        affiliates: await Affiliate.count(),
+        adminUsers: await AdminUser.count()
+      },
+      environment: {
+        has_database_url: !!process.env.DATABASE_URL,
+        has_saas_url: !!process.env.DATABASE_URL_SAAS,
+        has_admin_url: !!process.env.DATABASE_URL_ADMIN,
+        node_env: process.env.NODE_ENV
+      }
+    };
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: "Debug failed: " + err.message });
+  }
+});
+
 // Routes
 app.use('/api', adminRoutes);
+
+// Error Handler
+app.use((err, req, res, next) => {
+  console.error("ADMIN API ERROR:", err);
+  res.status(err.status || 500).json({
+    error: err.message || "Internal server error"
+  });
+});
 
 // Database Sync & Server Start
 const startServer = async () => {

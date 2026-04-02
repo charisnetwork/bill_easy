@@ -31,7 +31,7 @@ exports.getSummary = async (req, res) => {
     });
   } catch (error) {
     console.error("Summary Error:", error);
-    res.status(500).json({ error: "Failed to fetch summary" });
+    res.status(500).json({ error: "Failed to fetch summary: " + error.message });
   }
 };
 
@@ -41,6 +41,7 @@ exports.getRevenueAnalytics = async (req, res) => {
     const { type } = req.query;
     let results;
 
+    // Use camelCase 'createdAt' - Sequelize with underscored:true maps it to 'created_at'
     if (type === 'weekly') {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -52,7 +53,7 @@ exports.getRevenueAnalytics = async (req, res) => {
         ],
         where: {
           payment_status: 'paid',
-          created_at: { [Op.gte]: sevenDaysAgo }
+          createdAt: { [Op.gte]: sevenDaysAgo }
         },
         group: [fn('date', col('created_at'))],
         order: [[fn('date', col('created_at')), 'ASC']]
@@ -73,16 +74,16 @@ exports.getRevenueAnalytics = async (req, res) => {
     res.json(results);
   } catch (error) {
     console.error("Revenue Analytics Error:", error);
-    res.status(500).json({ error: "Failed to fetch revenue analytics" });
+    res.status(500).json({ error: "Failed to fetch revenue analytics: " + error.message });
   }
 };
 
 // GET /admin/dashboard/subscribers
 exports.getSubscribers = async (req, res) => {
   try {
-    // Explicitly use created_at for ordering when underscored is true
+    // Use camelCase 'createdAt' for ordering
     const subscriptions = await Subscription.findAll({
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     const detailedSubscribers = await Promise.all(subscriptions.map(async (sub) => {
@@ -91,10 +92,9 @@ exports.getSubscribers = async (req, res) => {
       const coupon = sub.coupon_id ? await Coupon.findByPk(sub.coupon_id) : null;
 
       const subData = sub.toJSON();
-      // Ensure frontend sees 'createdAt' even if DB uses 'created_at'
       return {
         ...subData,
-        createdAt: subData.created_at || subData.createdAt,
+        createdAt: subData.createdAt || subData.created_at, // Robust mapping
         Plan: plan,
         Company: company,
         Coupon: coupon
@@ -104,7 +104,7 @@ exports.getSubscribers = async (req, res) => {
     res.json(detailedSubscribers);
   } catch (error) {
     console.error("Subscribers Error:", error);
-    res.status(500).json({ error: "Failed to fetch subscribers" });
+    res.status(500).json({ error: "Failed to fetch subscribers: " + error.message });
   }
 };
 
@@ -115,7 +115,6 @@ exports.getCouponAnalytics = async (req, res) => {
     const coupon = await Coupon.findByPk(id);
     if (!coupon) return res.status(404).json({ error: "Coupon not found" });
 
-    // Manually attach affiliate
     let affiliate = null;
     if (coupon.affiliate_id) {
         affiliate = await Affiliate.findByPk(coupon.affiliate_id);
@@ -128,7 +127,7 @@ exports.getCouponAnalytics = async (req, res) => {
 
     const subscriptions = await Subscription.findAll({
       where: { coupon_id: id },
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     const detailedUsers = await Promise.all(subscriptions.map(async (sub) => {
@@ -137,13 +136,12 @@ exports.getCouponAnalytics = async (req, res) => {
         const subData = sub.toJSON();
         return {
             ...subData,
-            createdAt: subData.created_at || subData.createdAt,
+            createdAt: subData.createdAt || subData.created_at,
             Company: company,
             Plan: plan
         };
     }));
 
-    // Weekly performance
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const weeklyPerformance = await Subscription.findAll({
@@ -154,7 +152,7 @@ exports.getCouponAnalytics = async (req, res) => {
       ],
       where: {
         coupon_id: id,
-        created_at: { [Op.gte]: sevenDaysAgo }
+        createdAt: { [Op.gte]: sevenDaysAgo }
       },
       group: [fn('date', col('created_at'))],
       order: [[fn('date', col('created_at')), 'ASC']]
@@ -169,6 +167,6 @@ exports.getCouponAnalytics = async (req, res) => {
     });
   } catch (error) {
     console.error("Coupon Analytics Error:", error);
-    res.status(500).json({ error: "Failed to fetch coupon analytics" });
+    res.status(500).json({ error: "Failed to fetch coupon analytics: " + error.message });
   }
 };
