@@ -6,8 +6,8 @@ const {
   User,
   Coupon
 } = require('../models/saasModels');
+const { Affiliate } = require('../models/adminModels');
 const { Op, fn, col } = require('sequelize');
-const { saasDB } = require('../config/db');
 
 // GET /admin/dashboard/summary
 exports.getSummary = async (req, res) => {
@@ -80,15 +80,25 @@ exports.getRevenueAnalytics = async (req, res) => {
 // GET /admin/dashboard/subscribers
 exports.getSubscribers = async (req, res) => {
   try {
-    const subscribers = await Subscription.findAll({
-      include: [
-        { model: Plan },
-        { model: Company },
-        { model: Coupon }
-      ],
+    // We use manual fetching for associated models to ensure it works across different DB connections
+    const subscriptions = await Subscription.findAll({
       order: [['createdAt', 'DESC']]
     });
-    res.json(subscribers);
+
+    const detailedSubscribers = await Promise.all(subscriptions.map(async (sub) => {
+      const plan = sub.plan_id ? await Plan.findByPk(sub.plan_id) : null;
+      const company = sub.company_id ? await Company.findByPk(sub.company_id) : null;
+      const coupon = sub.coupon_id ? await Coupon.findByPk(sub.coupon_id) : null;
+
+      return {
+        ...sub.toJSON(),
+        Plan: plan,
+        Company: company,
+        Coupon: coupon
+      };
+    }));
+
+    res.json(detailedSubscribers);
   } catch (error) {
     console.error("Subscribers Error:", error);
     res.status(500).json({ error: "Failed to fetch subscribers" });
@@ -102,16 +112,31 @@ exports.getCouponAnalytics = async (req, res) => {
     const coupon = await Coupon.findByPk(id);
     if (!coupon) return res.status(404).json({ error: "Coupon not found" });
 
+    // Manually attach affiliate
+    let affiliate = null;
+    if (coupon.affiliate_id) {
+        affiliate = await Affiliate.findByPk(coupon.affiliate_id);
+    }
+
     const usageCount = await Subscription.count({ where: { coupon_id: id } });
     const totalRevenue = await Subscription.sum('price', { 
       where: { coupon_id: id, payment_status: 'paid' } 
     }) || 0;
 
-    const users = await Subscription.findAll({
+    const subscriptions = await Subscription.findAll({
       where: { coupon_id: id },
-      include: [{ model: Company }, { model: Plan }],
       order: [['createdAt', 'DESC']]
     });
+
+    const detailedUsers = await Promise.all(subscriptions.map(async (sub) => {
+        const company = sub.company_id ? await Company.findByPk(sub.company_id) : null;
+        const plan = sub.plan_id ? await Plan.findByPk(sub.plan_id) : null;
+        return {
+            ...sub.toJSON(),
+            Company: company,
+            Plan: plan
+        };
+    }));
 
     // Weekly performance
     const sevenDaysAgo = new Date();
@@ -131,10 +156,10 @@ exports.getCouponAnalytics = async (req, res) => {
     });
 
     res.json({
-      coupon,
+      coupon: { ...coupon.toJSON(), affiliate },
       usageCount,
       totalRevenue,
-      users,
+      users: detailedUsers,
       weeklyPerformance
     });
   } catch (error) {

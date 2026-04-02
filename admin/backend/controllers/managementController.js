@@ -90,11 +90,13 @@ exports.deleteAffiliate = async (req, res) => {
     res.status(500).json({ error: "Failed to delete affiliate" });
   }
 };
+
 // GET /admin/coupons
 exports.getCoupons = async (req, res) => {
   try {
+    // We fetch coupons first. 
+    // Manual attachment of Affiliate because they might be in different DBs
     const coupons = await Coupon.findAll({ 
-      include: [{ model: Affiliate, as: 'affiliate' }],
       order: [['createdAt', 'DESC']] 
     });
 
@@ -105,9 +107,15 @@ exports.getCoupons = async (req, res) => {
       }) || 0;
 
       const isExpired = coupon.expiry_date && new Date() > new Date(coupon.expiry_date);
+      
+      let affiliate = null;
+      if (coupon.affiliate_id) {
+        affiliate = await Affiliate.findByPk(coupon.affiliate_id);
+      }
 
       return {
         ...coupon.toJSON(),
+        affiliate,
         usage_count: usageCount,
         revenue_generated: revenueGenerated,
         is_expired: isExpired
@@ -125,6 +133,7 @@ exports.getCoupons = async (req, res) => {
 exports.createCoupon = async (req, res) => {
   try {
     const data = { ...req.body };
+    // Frontend sends company_id as the affiliate identifier in the modal
     if (data.company_id) {
       data.affiliate_id = data.company_id;
       delete data.company_id;

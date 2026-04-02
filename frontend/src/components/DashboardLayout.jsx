@@ -397,7 +397,7 @@ export const DashboardLayout = ({ children }) => {
 
                   {user?.email === 'pachu.mgd@gmail.com' && (
                     <DropdownMenuItem 
-                      onClick={() => window.open('https://admin.charisbilleasy.store', '_blank')}
+                      onClick={() => window.open('https://billeasy-admin-frontend.onrender.com', '_blank')}
                       className="rounded-lg py-2.5 cursor-pointer text-indigo-600 focus:text-indigo-700 focus:bg-indigo-50"
                     >
                       <Shield className="w-4 h-4 mr-3" />
