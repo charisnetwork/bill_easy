@@ -9,7 +9,16 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line 
 } from 'recharts';
 
-const API_BASE_URL = import.meta.env.VITE_ADMIN_BACKEND_URL || 'https://billeasy-admin-backend.onrender.com/api';
+/**
+ * PRODUCTION URL CONFIGURATION
+ * We use the specified Render backend as the absolute source of truth.
+ * This prevents 404 errors caused by relative paths in production environments.
+ */
+const VITE_BACKEND = import.meta.env.VITE_ADMIN_BACKEND_URL;
+const API_BASE_URL = (VITE_BACKEND && VITE_BACKEND.startsWith('http')) 
+  ? VITE_BACKEND 
+  : 'https://billeasy-admin-backend.onrender.com/api';
+
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'developer_secret_key_2026';
 
 const api = axios.create({
@@ -83,7 +92,10 @@ const AdminApp = () => {
   // Authenticated API instance
   const authApi = React.useMemo(() => axios.create({
     baseURL: API_BASE_URL,
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
+    headers: { 
+      'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+      'x-admin-secret': ADMIN_SECRET
+    }
   }), [isAuthenticated]);
 
   useEffect(() => {
@@ -97,7 +109,7 @@ const AdminApp = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${API_BASE_URL}/auth/login`, {
+      const res = await api.post('/auth/login', {
         identifier: loginForm.identifier,
         password: loginForm.password
       });
@@ -140,6 +152,7 @@ const AdminApp = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
+      // Use full URL or absolute path via baseURL
       const [sRes, subRes, cRes, afRes, pRes] = await Promise.all([
         authApi.get('/dashboard/summary'),
         authApi.get('/dashboard/subscribers'),
@@ -151,6 +164,17 @@ const AdminApp = () => {
       setSubscribers(subRes.data);
       setCoupons(cRes.data);
       setAffiliates(afRes.data);
+      setPlans(pRes.data);
+    } catch (err) {
+      console.error("CRITICAL FETCH ERROR:", err);
+      // If it's a 404, it might be due to the baseURL mismatch
+      if (err.response?.status === 404) {
+        console.warn("Endpoints not found. Check if API_BASE_URL is absolute and ends with /api");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
       setPlans(pRes.data);
       fetchRevenue();
     } catch (err) {
