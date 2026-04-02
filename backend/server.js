@@ -136,6 +136,16 @@ app.use('/api/staff', require('./routes/staff'));
 app.use("/api/utils", require("./routes/utilities"));
 app.use("/uploads", express.static("uploads"));
 
+// Serve Frontend in Production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.resolve(__dirname, '../frontend', 'build', 'index.html'));
+  });
+}
+
 /* =========================================
    ROOT ENDPOINT
 ========================================= */
