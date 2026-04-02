@@ -11,13 +11,9 @@ import {
 
 /**
  * PRODUCTION URL CONFIGURATION
- * We use the specified Render backend as the absolute source of truth.
- * This prevents 404 errors caused by relative paths in production environments.
+ * We hardcode the absolute Render backend URL to prevent relative path 404 errors.
  */
-const VITE_BACKEND = import.meta.env.VITE_ADMIN_BACKEND_URL;
-const API_BASE_URL = (VITE_BACKEND && VITE_BACKEND.startsWith('http')) 
-  ? VITE_BACKEND 
-  : 'https://billeasy-admin-backend.onrender.com/api';
+const API_BASE_URL = 'https://billeasy-admin-backend.onrender.com/api';
 
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'developer_secret_key_2026';
 
