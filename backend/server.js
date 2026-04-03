@@ -52,22 +52,24 @@ app.use(
       const allowedOrigins = process.env.ALLOWED_ORIGINS 
         ? process.env.ALLOWED_ORIGINS.split(',') 
         : [
-          'https://charisbilleasy.store', 
+          'https://charisbilleasy.store',
           'https://admin.charisbilleasy.store',
           'http://localhost:3000',
           'http://localhost:3021'
         ];
       
+      // Allow requests with no origin (e.g., mobile apps, curl requests)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.warn(`[CORS] Rejected: ${origin}`);
+        console.warn(`[CORS] Rejected origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id'],
-    credentials: true
+    credentials: true,
+    maxAge: 86400 // 24 hours
   })
 );
 

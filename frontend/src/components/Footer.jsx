@@ -89,7 +89,7 @@ const Footer = () => {
                     message: 'Quick callback request from footer'
                   };
                   try {
-                    const response = await fetch('https://billeasy-admin-backend.onrender.com/api/enquiries', {
+                    const response = await fetch('https://billeasy-backend.onrender.com/api/enquiries', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(data)

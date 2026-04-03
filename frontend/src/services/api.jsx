@@ -5,7 +5,7 @@ import axios from 'axios';
  * We hardcode the production URL as the primary value for charisbilleasy.store 
  * to ensure absolute routing and prevent relative path errors.
  */
-const BASE_URL = 'https://billeasy-admin-backend.onrender.com';
+const BASE_URL = 'https://billeasy-backend.onrender.com';
 const API_URL = `${BASE_URL}/api`;
 
 const getToken = () => localStorage.getItem('token');
