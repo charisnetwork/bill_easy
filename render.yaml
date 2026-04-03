@@ -64,7 +64,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20
-      - key: DATABASE_URL
+      - key: DATABASE_URL_SaaS
         fromDatabase:
           name: billeasy-db
           property: connectionString
@@ -87,7 +87,7 @@ services:
     rootDir: admin/frontend
     envVars:
       - key: VITE_ADMIN_BACKEND_URL
-        value: https://billeasy-backend.onrender.com # Update this if your admin backend name is different
+        value: https://billeasy-admin-backend.onrender.com
       - key: VITE_ADMIN_SECRET
         value: developer_secret_key_2026
     routes:
