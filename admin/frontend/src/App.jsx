@@ -11,9 +11,11 @@ import {
 } from 'recharts';
 
 const API_BASE_URL = 'https://billeasy-admin-backend.onrender.com/api';
+const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'developer_secret_key_2026';
 
 const api = axios.create({
-  baseURL: API_BASE_URL
+  baseURL: API_BASE_URL,
+  headers: { 'x-admin-secret': ADMIN_SECRET }
 });
 
 // Login Component

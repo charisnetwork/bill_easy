@@ -46,8 +46,7 @@ const startServer = async () => {
 
     // Sync Admin DB (Write Access for Affiliates, Expenses, etc.)
     await adminDB.authenticate();
-    // Use force: true to recreate tables with new schema (remove after first deploy)
-    await adminDB.sync({ force: true });
+    await adminDB.sync({ alter: true });
     console.log('✅ Connected and Synced Admin Database');
 
     // Seed Default Admin User
