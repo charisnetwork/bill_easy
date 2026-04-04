@@ -1,7 +1,55 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
+const { AdminUser } = require('../models/adminModels');
 const analyticsController = require('../controllers/analyticsController');
 const managementController = require('../controllers/managementController');
+
+// Public login route (no auth required)
+router.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+    
+    // Find admin user
+    const admin = await AdminUser.findOne({
+      where: { email, is_active: true }
+    });
+    
+    if (!admin) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, admin.password_hash);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Update last login
+    await admin.update({ last_login: new Date() });
+    
+    // Return admin secret for subsequent requests
+    res.json({
+      success: true,
+      message: 'Login successful',
+      adminSecret: process.env.ADMIN_SECRET,
+      user: {
+        id: admin.id,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
 
 // Developer-only simple auth middleware
 const authMiddleware = (req, res, next) => {

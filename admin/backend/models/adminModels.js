@@ -1,6 +1,17 @@
 const { DataTypes } = require('sequelize');
 const { adminDB } = require('../config/db');
 
+// Admin User Model
+const AdminUser = adminDB.define('AdminUser', {
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  email: { type: DataTypes.STRING, allowNull: false, unique: true },
+  password_hash: { type: DataTypes.STRING, allowNull: false },
+  name: { type: DataTypes.STRING, defaultValue: 'Admin' },
+  role: { type: DataTypes.ENUM('super_admin', 'admin'), defaultValue: 'super_admin' },
+  is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  last_login: { type: DataTypes.DATE }
+}, { tableName: 'AdminUsers', timestamps: true });
+
 const Affiliate = adminDB.define('Affiliate', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   company_name: { type: DataTypes.STRING, allowNull: false },
@@ -27,6 +38,7 @@ const GlobalNotification = adminDB.define('GlobalNotification', {
 }, { tableName: 'GlobalNotifications', timestamps: false });
 
 module.exports = { 
+  AdminUser,
   Affiliate, 
   PlatformExpense, 
   GlobalNotification 

@@ -18,8 +18,9 @@ const api = axios.create({
 
 // Login Component
 const LoginPage = ({ onLogin }) => {
-  const [secret, setSecret] = useState('');
-  const [showSecret, setShowSecret] = useState(false);
+  const [email, setEmail] = useState('pachu.mgd@gmail.com');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,19 +30,21 @@ const LoginPage = ({ onLogin }) => {
     setError('');
 
     try {
-      // Test the secret by making a request to the backend
-      const testApi = axios.create({
-        baseURL: API_BASE_URL,
-        headers: { 'x-admin-secret': secret }
+      // Call login API
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+        email,
+        password
       });
       
-      await testApi.get('/dashboard/summary');
-      
-      // If successful, store secret and login
-      localStorage.setItem('adminSecret', secret);
-      onLogin(secret);
+      if (response.data.success) {
+        const secret = response.data.adminSecret;
+        const user = response.data.user;
+        localStorage.setItem('adminSecret', secret);
+        localStorage.setItem('adminUser', JSON.stringify(user));
+        onLogin(secret, user);
+      }
     } catch (err) {
-      setError('Invalid admin secret. Access denied.');
+      setError(err.response?.data?.error || 'Invalid email or password. Access denied.');
     } finally {
       setLoading(false);
     }
@@ -58,27 +61,44 @@ const LoginPage = ({ onLogin }) => {
           <p className="text-slate-500 text-sm mt-2">Admin Control Center</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">
-              Admin Secret Key
+              Email Address
+            </label>
+            <div className="relative">
+              <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-4 text-white font-bold focus:border-indigo-500 outline-none transition-all"
+                placeholder="admin@example.com"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">
+              Password
             </label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
               <input
-                type={showSecret ? 'text' : 'password'}
-                value={secret}
-                onChange={(e) => setSecret(e.target.value)}
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-12 py-4 text-white font-bold focus:border-indigo-500 outline-none transition-all"
-                placeholder="Enter admin secret..."
+                placeholder="Enter your password"
                 required
               />
               <button
                 type="button"
-                onClick={() => setShowSecret(!showSecret)}
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
               >
-                {showSecret ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
           </div>
@@ -116,6 +136,7 @@ const LoginPage = ({ onLogin }) => {
 const AdminApp = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminSecret, setAdminSecret] = useState('');
+  const [adminUser, setAdminUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [summary, setSummary] = useState(null);
   const [revenueData, setRevenueData] = useState([]);
@@ -129,23 +150,30 @@ const AdminApp = () => {
   // Check for stored secret on mount
   useEffect(() => {
     const storedSecret = localStorage.getItem('adminSecret');
+    const storedUser = localStorage.getItem('adminUser');
     if (storedSecret) {
       setAdminSecret(storedSecret);
       setIsAuthenticated(true);
+      if (storedUser) {
+        setAdminUser(JSON.parse(storedUser));
+      }
       // Update API headers
       api.defaults.headers['x-admin-secret'] = storedSecret;
     }
   }, []);
 
-  const handleLogin = (secret) => {
+  const handleLogin = (secret, user) => {
     setAdminSecret(secret);
+    setAdminUser(user);
     setIsAuthenticated(true);
     api.defaults.headers['x-admin-secret'] = secret;
   };
 
   const handleLogout = () => {
     localStorage.removeItem('adminSecret');
+    localStorage.removeItem('adminUser');
     setAdminSecret('');
+    setAdminUser(null);
     setIsAuthenticated(false);
     delete api.defaults.headers['x-admin-secret'];
   };
@@ -369,10 +397,17 @@ const AdminApp = () => {
           ))}
         </nav>
 
-        {/* Logout Button */}
+        {/* User Info & Logout */}
+        {adminUser && (
+          <div className="mb-4 px-4 py-3 bg-slate-900 rounded-xl border border-slate-800">
+            <p className="text-xs text-slate-500 font-bold uppercase">Logged in as</p>
+            <p className="text-sm text-white font-bold truncate">{adminUser.name}</p>
+            <p className="text-xs text-indigo-400 truncate">{adminUser.email}</p>
+          </div>
+        )}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-200 mt-auto"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-200"
         >
           <LogOut className="w-5 h-5" />
           Logout
