@@ -123,15 +123,19 @@ export const LoginPage = () => {
                   <form onSubmit={handleRequestReset} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="reset-email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input
+                      <div 
+                        className="flex items-center px-4 py-3 border border-slate-200 rounded-lg bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all"
+                        style={{ display: 'flex', alignItems: 'center' }}
+                      >
+                        <Mail className="w-4 h-4 text-slate-400 mr-3 flex-shrink-0" style={{ marginRight: '12px' }} />
+                        <input
                           id="reset-email"
                           type="email"
                           placeholder="you@company.com"
                           value={resetData.email}
                           onChange={(e) => setResetData({ ...resetData, email: e.target.value })}
-                          className="pl-10"
+                          className="flex-1 bg-transparent border-none outline-none text-slate-900 placeholder:text-slate-400"
+                          style={{ flex: 1, border: 'none' }}
                           required
                         />
                       </div>
@@ -174,30 +178,38 @@ export const LoginPage = () => {
                   <form onSubmit={handleVerifyReset} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="new-password">New Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input
+                      <div 
+                        className="flex items-center px-4 py-3 border border-slate-200 rounded-lg bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all"
+                        style={{ display: 'flex', alignItems: 'center' }}
+                      >
+                        <Lock className="w-4 h-4 text-slate-400 mr-3 flex-shrink-0" style={{ marginRight: '12px' }} />
+                        <input
                           id="new-password"
                           type={showPassword ? 'text' : 'password'}
                           placeholder="••••••••"
                           value={resetData.newPassword}
                           onChange={(e) => setResetData({ ...resetData, newPassword: e.target.value })}
-                          className="pl-10"
+                          className="flex-1 bg-transparent border-none outline-none text-slate-900 placeholder:text-slate-400"
+                          style={{ flex: 1, border: 'none' }}
                           required
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirm-password">Confirm Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input
+                      <div 
+                        className="flex items-center px-4 py-3 border border-slate-200 rounded-lg bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all"
+                        style={{ display: 'flex', alignItems: 'center' }}
+                      >
+                        <Lock className="w-4 h-4 text-slate-400 mr-3 flex-shrink-0" style={{ marginRight: '12px' }} />
+                        <input
                           id="confirm-password"
                           type={showPassword ? 'text' : 'password'}
                           placeholder="••••••••"
                           value={resetData.confirmPassword}
                           onChange={(e) => setResetData({ ...resetData, confirmPassword: e.target.value })}
-                          className="pl-10"
+                          className="flex-1 bg-transparent border-none outline-none text-slate-900 placeholder:text-slate-400"
+                          style={{ flex: 1, border: 'none' }}
                           required
                         />
                       </div>
@@ -248,15 +260,19 @@ export const LoginPage = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
+                  <div 
+                    className="flex items-center px-4 py-3 border border-slate-200 rounded-lg bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all"
+                    style={{ display: 'flex', alignItems: 'center' }}
+                  >
+                    <Mail className="w-4 h-4 text-slate-400 mr-3 flex-shrink-0" style={{ marginRight: '12px' }} />
+                    <input
                       id="email"
                       type="email"
                       placeholder="you@company.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="pl-10"
+                      className="flex-1 bg-transparent border-none outline-none text-slate-900 placeholder:text-slate-400"
+                      style={{ flex: 1, border: 'none' }}
                       required
                       data-testid="login-email-input"
                     />
@@ -274,22 +290,27 @@ export const LoginPage = () => {
                       Forgot Password?
                     </button>
                   </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
+                  <div 
+                    className="flex items-center px-4 py-3 border border-slate-200 rounded-lg bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all"
+                    style={{ display: 'flex', alignItems: 'center' }}
+                  >
+                    <Lock className="w-4 h-4 text-slate-400 mr-3 flex-shrink-0" style={{ marginRight: '12px' }} />
+                    <input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="pl-10 pr-10"
+                      className="flex-1 bg-transparent border-none outline-none text-slate-900 placeholder:text-slate-400"
+                      style={{ flex: 1, border: 'none' }}
                       required
                       data-testid="login-password-input"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="ml-2 text-slate-400 hover:text-slate-600 flex-shrink-0"
+                      style={{ marginLeft: '8px' }}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
