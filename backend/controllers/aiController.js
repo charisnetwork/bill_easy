@@ -45,122 +45,111 @@ const chatWithAssistant = async (req, res) => {
     }
 
     const lowerQuestion = question.toLowerCase();
-    let financialContext = "";
-    let inventoryContext = "";
+    
+    // 1. Fetch Business Data ALWAYS (don't rely on AI to filter)
+    let businessData = {};
+    
+    try {
+      // Get financial data
+      const [totalSalesData, totalExpensesData] = await Promise.all([
+        Invoice.sum('total_amount', { where: { company_id: companyId } }),
+        Expense.sum('amount', { where: { company_id: companyId } })
+      ]);
 
-    // 1. Conditional Context Fetching - ONLY for in-app business data
-    const isFinancialQuery = lowerQuestion.includes('sale') || lowerQuestion.includes('profit') || lowerQuestion.includes('loss') || lowerQuestion.includes('revenue') || lowerQuestion.includes('income') || lowerQuestion.includes('expense') || lowerQuestion.includes('money') || lowerQuestion.includes('today') || lowerQuestion.includes('total') || lowerQuestion.includes('business');
-    const isInventoryQuery = lowerQuestion.includes('stock') || lowerQuestion.includes('inventory') || lowerQuestion.includes('product') || lowerQuestion.includes('item');
+      // Get today's sales
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todaySalesData = await Invoice.sum('total_amount', { 
+        where: { 
+          company_id: companyId,
+          invoice_date: { [Op.gte]: today }
+        } 
+      });
 
-    if (isFinancialQuery) {
-      console.log(">>> Charis: Fetching Financial Context for relevant query...");
-      try {
-        const [totalSalesData, totalExpensesData] = await Promise.all([
-          Invoice.sum('total_amount', { where: { company_id: companyId } }),
-          Expense.sum('amount', { where: { company_id: companyId } })
-        ]);
+      // Get inventory data
+      const totalProducts = await Product.count({ where: { company_id: companyId } });
+      const lowStockProducts = await Product.findAll({
+        where: { company_id: companyId },
+        order: [['stock_quantity', 'ASC']],
+        limit: 5,
+        attributes: ['name', 'stock_quantity']
+      });
 
-        // Get today's sales
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todaySalesData = await Invoice.sum('total_amount', { 
-          where: { 
-            company_id: companyId,
-            invoice_date: { [Op.gte]: today }
-          } 
-        });
-
-        const totalSales = parseFloat(totalSalesData || 0);
-        const totalExpenses = parseFloat(totalExpensesData || 0);
-        const todaySales = parseFloat(todaySalesData || 0);
-        const netProfit = totalSales - totalExpenses;
-
-        financialContext = `\n[Real-time Business Data] Today's Sales: ₹${todaySales.toFixed(2)}, Total Sales: ₹${totalSales.toFixed(2)}, Total Expenses: ₹${totalExpenses.toFixed(2)}, Net Profit: ₹${netProfit.toFixed(2)}.`;
-      } catch (dbError) {
-        console.error(">>> Charis DB Error (Financial):", dbError.message);
-      }
-    }
-
-    if (isInventoryQuery) {
-      console.log(">>> Charis: Fetching Inventory Context for relevant query...");
-      try {
-        const lowStockProducts = await Product.findAll({
-          where: { company_id: companyId },
-          order: [['stock_quantity', 'ASC']],
-          limit: 5,
-          attributes: ['name', 'stock_quantity']
-        });
-
-        const totalProducts = await Product.count({ where: { company_id: companyId } });
-
-        if (lowStockProducts.length > 0) {
-          inventoryContext = `\n[Real-time Inventory Data] Total Products: ${totalProducts}. Items running low: ` + lowStockProducts.map(p => `${p.name} (${p.stock_quantity} left)`).join(", ");
-        } else {
-          inventoryContext = `\n[Real-time Inventory Data] Total Products: ${totalProducts}. All items well stocked.`;
-        }
-      } catch (dbError) {
-        console.error(">>> Charis DB Error (Inventory):", dbError.message);
-      }
+      businessData = {
+        todaySales: parseFloat(todaySalesData || 0),
+        totalSales: parseFloat(totalSalesData || 0),
+        totalExpenses: parseFloat(totalExpensesData || 0),
+        netProfit: parseFloat(totalSalesData || 0) - parseFloat(totalExpensesData || 0),
+        totalProducts: totalProducts,
+        lowStockItems: lowStockProducts.map(p => `${p.name} (${p.stock_quantity} left)`).join(', ')
+      };
+      
+      console.log(">>> Charis: Business data fetched:", businessData);
+    } catch (dbError) {
+      console.error(">>> Charis DB Error:", dbError.message);
     }
 
     const company = await Company.findByPk(companyId, { attributes: ['name'] });
     const businessName = company?.name || "your business";
 
-    // 2. STRICT System Instruction - ONLY in-app business data, NO coding
-    const systemInstruction = `You are Charis, an AI business assistant for ${businessName}.
+    // 2. ULTRA STRICT Response - Only return business data, no AI creativity
+    const isBusinessQuery = lowerQuestion.includes('sale') || 
+                           lowerQuestion.includes('profit') || 
+                           lowerQuestion.includes('loss') || 
+                           lowerQuestion.includes('revenue') || 
+                           lowerQuestion.includes('income') || 
+                           lowerQuestion.includes('expense') || 
+                           lowerQuestion.includes('money') || 
+                           lowerQuestion.includes('today') || 
+                           lowerQuestion.includes('total') || 
+                           lowerQuestion.includes('business') ||
+                           lowerQuestion.includes('stock') || 
+                           lowerQuestion.includes('inventory') || 
+                           lowerQuestion.includes('product');
 
-STRICT RULES - YOU MUST FOLLOW:
-1. PURPOSE: You ONLY provide in-app business data like sales, expenses, inventory, and profit/loss information.
-2. NO CODING: You NEVER write code, provide scripts, terminal commands, or technical implementation. If asked for code, politely refuse: "I'm here to help with your business data only. For technical support, please contact our support team."
-3. NO EXTERNAL HELP: You cannot help with general knowledge, weather, news, math problems, writing emails, or any non-business tasks.
-4. BUSINESS ONLY: Only answer questions about: Today's sales, Total sales, Expenses, Profit/Loss, Inventory levels, Stock status, Product counts.
-5. GREETINGS: If user says "Hi", respond warmly as a business assistant and offer to help with their sales/expenses/stock data.
-6. NO ACTIONS: You cannot create invoices, bills, or perform any actions. Only READ and REPORT existing data.
-7. CONCISE: Keep answers short and focused on the business data provided.
+    // Check for greetings
+    const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|namaste)/i.test(question.trim());
 
-If asked anything outside business data (coding, general questions, etc.), reply: "I'm Charis, your business data assistant. I can help you with information about your sales, expenses, inventory, and profits. What would you like to know about your business today?"`;
+    let responseText = "";
 
-    // 3. Build full prompt with system instruction and context
-    const contextStr = (financialContext || inventoryContext) ? `\n[Your Business Data]:${financialContext}${inventoryContext}` : "";
-    const fullPrompt = `${systemInstruction}\n\n${contextStr}\n\nUser Question: ${question}`;
-
-    // 4. Gemini Call with Fallback
-    let text;
-    const modelName = "gemini-3-flash-preview";
-    
-    try {
-      console.log(`>>> Charis: Attempting to call ${modelName}...`);
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(fullPrompt);
-      const response = await result.response;
-      text = response.text();
-    } catch (apiError) {
-      console.error(">>> Charis API Error (Primary):", apiError.message);
-      try {
-        console.log(`>>> Charis: Retrying with models/${modelName}...`);
-        const model = genAI.getGenerativeModel({ model: `models/${modelName}` });
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        text = response.text();
-      } catch (retryError) {
-        console.error(">>> Charis API Error (Retry):", retryError.message);
-        try {
-          console.log(">>> Charis: Falling back to gemini-1.5-flash...");
-          const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await fallbackModel.generateContent(fullPrompt);
-          const response = await result.response;
-          text = response.text();
-        } catch (fatalError) {
-          console.error(">>> Charis API Fatal Error:", fatalError.message);
-          return res.status(200).json({ 
-            answer: "Charis is currently updating its financial brain. Please try again in a moment." 
-          });
+    if (isGreeting) {
+      responseText = `Hello! I'm Charis, your business assistant for ${businessName}. I can help you with:\n\n• Today's Sales: ₹${businessData.todaySales?.toFixed(2) || '0.00'}\n• Total Sales: ₹${businessData.totalSales?.toFixed(2) || '0.00'}\n• Total Expenses: ₹${businessData.totalExpenses?.toFixed(2) || '0.00'}\n• Net Profit: ₹${businessData.netProfit?.toFixed(2) || '0.00'}\n• Total Products: ${businessData.totalProducts || 0}\n\nWhat would you like to know about your business?`;
+    } else if (isBusinessQuery) {
+      // Build response based on what they asked
+      let answer = "";
+      
+      if (lowerQuestion.includes('today') && lowerQuestion.includes('sale')) {
+        answer = `Today's Sales: ₹${businessData.todaySales?.toFixed(2) || '0.00'}`;
+      } else if (lowerQuestion.includes('total') && lowerQuestion.includes('sale')) {
+        answer = `Total Sales: ₹${businessData.totalSales?.toFixed(2) || '0.00'}`;
+      } else if (lowerQuestion.includes('expense')) {
+        answer = `Total Expenses: ₹${businessData.totalExpenses?.toFixed(2) || '0.00'}`;
+      } else if (lowerQuestion.includes('profit') || lowerQuestion.includes('loss')) {
+        const profit = businessData.netProfit || 0;
+        answer = profit >= 0 
+          ? `Net Profit: ₹${profit.toFixed(2)}` 
+          : `Net Loss: ₹${Math.abs(profit).toFixed(2)}`;
+      } else if (lowerQuestion.includes('stock') || lowerQuestion.includes('inventory') || lowerQuestion.includes('product')) {
+        answer = `Total Products: ${businessData.totalProducts || 0}`;
+        if (businessData.lowStockItems) {
+          answer += `\n\nLow Stock Alert:\n${businessData.lowStockItems}`;
+        }
+      } else {
+        // General business summary
+        answer = `Here's your business summary:\n\n📊 Financials:\n• Today's Sales: ₹${businessData.todaySales?.toFixed(2) || '0.00'}\n• Total Sales: ₹${businessData.totalSales?.toFixed(2) || '0.00'}\n• Total Expenses: ₹${businessData.totalExpenses?.toFixed(2) || '0.00'}\n• Net Profit: ₹${businessData.netProfit?.toFixed(2) || '0.00'}\n\n📦 Inventory:\n• Total Products: ${businessData.totalProducts || 0}`;
+        if (businessData.lowStockItems) {
+          answer += `\n• Low Stock: ${businessData.lowStockItems}`;
         }
       }
+      
+      responseText = answer;
+    } else {
+      // Non-business query - strictly refuse
+      responseText = "I'm Charis, your business data assistant for Bill Easy. I can only provide information about your sales, expenses, inventory, and profits. I cannot help with coding, general knowledge, or other tasks. How can I help you with your business today?";
     }
 
-    console.log(">>> Charis successfully generated a response.");
-    res.json({ answer: text });
+    console.log(">>> Charis: Sending business data response");
+    res.json({ answer: responseText });
 
   } catch (error) {
     console.error(">>> Charis Assistant General Error:", error);

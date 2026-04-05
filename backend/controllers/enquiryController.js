@@ -5,8 +5,8 @@ exports.createEnquiry = async (req, res) => {
   try {
     const { name, phone, email, business_type, message } = req.body;
 
-    if (!name || !phone) {
-      return res.status(400).json({ error: "Name and Phone Number are required." });
+    if (!name || !phone || !email) {
+      return res.status(400).json({ error: "Name, Phone Number, and Email are required." });
     }
 
     const enquiry = await Enquiry.create({
@@ -14,7 +14,7 @@ exports.createEnquiry = async (req, res) => {
       phone,
       email,
       business_type,
-      message,
+      message: message || '',
       status: 'pending'
     });
 

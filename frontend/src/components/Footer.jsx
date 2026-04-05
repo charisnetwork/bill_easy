@@ -90,6 +90,7 @@ const Footer = () => {
                   const data = {
                     name: formData.get('name'),
                     phone: formData.get('phone'),
+                    email: formData.get('email'),
                     message: formData.get('message')
                   };
                   
@@ -128,22 +129,28 @@ const Footer = () => {
                 <input 
                   name="name"
                   type="text" 
-                  placeholder="1. Name" 
+                  placeholder="1. Name *" 
                   required
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 placeholder-slate-500"
                 />
                 <input 
                   name="phone"
                   type="tel" 
-                  placeholder="2. Mobile No." 
+                  placeholder="2. Mobile No. *" 
+                  required
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 placeholder-slate-500"
+                />
+                <input 
+                  name="email"
+                  type="email" 
+                  placeholder="3. Email *" 
                   required
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 placeholder-slate-500"
                 />
                 <textarea 
                   name="message"
-                  placeholder="3. Message" 
+                  placeholder="4. Message" 
                   rows="3"
-                  required
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 placeholder-slate-500 resize-none"
                 ></textarea>
                 <button 
