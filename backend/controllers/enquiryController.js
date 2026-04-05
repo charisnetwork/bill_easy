@@ -23,14 +23,12 @@ exports.createEnquiry = async (req, res) => {
     // --- Email Forwarding Logic ---
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
       try {
-        console.log(`>>> [Brevo] Configuring SMTP with host: ${process.env.SMTP_HOST}, port: ${process.env.SMTP_PORT || 587}`);
-        console.log(`>>> [Brevo] Login user: ${process.env.SMTP_USER}`);
+        console.log(`>>> [Brevo] Configuring SMTP with host: ${process.env.SMTP_HOST}, port: 587`);
         
-        // Brevo SMTP configuration - using port 587 with STARTTLS
         const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
           port: 587,
-          secure: false, // false for 587 (STARTTLS), true for 465 (SSL)
+          secure: false,
           auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
@@ -39,69 +37,91 @@ exports.createEnquiry = async (req, res) => {
             rejectUnauthorized: false,
             minVersion: 'TLSv1.2'
           },
-          connectionTimeout: 10000, // 10 seconds
+          connectionTimeout: 10000,
           greetingTimeout: 10000,
           socketTimeout: 10000
         });
 
+        // IMPORTANT: Brevo requires a verified sender email
+        // Using SMTP_USER as from address (this is the Brevo login email)
+        // Reply-To is set to the person who submitted the form
         const mailOptions = {
-          from: `"BillEasy System" <${process.env.SMTP_USER}>`,
-          to: "support@charisbilleasy.store",
-          subject: `New Enquiry: ${name}`,
+          from: `"BillEasy Enquiries" <${process.env.SMTP_USER}>`,
+          to: process.env.SUPPORT_EMAIL || "support@charisbilleasy.store",
+          replyTo: email, // Replies go to the person who submitted the form
+          subject: `New Enquiry from ${name}`,
           text: `
-New Lead Details:
------------------
+NEW ENQUIRY RECEIVED
+====================
+
 Name: ${name}
 Phone: ${phone}
-Email: ${email || 'N/A'}
+Email: ${email}
 Business Type: ${business_type || 'N/A'}
 Message: ${message || 'N/A'}
 
-Timestamp: ${new Date().toLocaleString()}
+Submitted: ${new Date().toLocaleString()}
+
+---
+This enquiry was submitted via the BillEasy website footer form.
+Reply to this email to respond to ${name} at ${email}.
           `,
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #2563eb;">New Lead Details</h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Name:</td>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${name}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Phone:</td>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${phone}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Email:</td>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${email || 'N/A'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Business Type:</td>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${business_type || 'N/A'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Message:</td>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${message || 'N/A'}</td>
-                </tr>
-              </table>
-              <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
-              <p style="color: #6b7280; font-size: 12px;">Sent from BillEasy SaaS Platform</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+              <div style="background: #2563eb; color: white; padding: 20px;">
+                <h2 style="margin: 0; font-size: 20px;">New Enquiry Received</h2>
+              </div>
+              <div style="padding: 20px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #374151; width: 30%;">Name:</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #111827;">${name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Phone:</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #111827;">${phone}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Email:</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #111827;"><a href="mailto:${email}">${email}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Business Type:</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #111827;">${business_type || 'N/A'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px; font-weight: bold; color: #374151; vertical-align: top;">Message:</td>
+                    <td style="padding: 12px; color: #111827; white-space: pre-wrap;">${message || 'N/A'}</td>
+                  </tr>
+                </table>
+              </div>
+              <div style="background: #f9fafb; padding: 15px 20px; border-top: 1px solid #e5e7eb;">
+                <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                  Submitted: ${new Date().toLocaleString()}<br>
+                  Reply to this email to respond directly to ${name}.
+                </p>
+              </div>
             </div>
           `
         };
 
-        console.log(`>>> [Brevo] Sending email...`);
+        console.log(`>>> [Brevo] Sending email to: ${mailOptions.to}`);
+        console.log(`>>> [Brevo] From: ${mailOptions.from}`);
+        console.log(`>>> [Brevo] Reply-To: ${mailOptions.replyTo}`);
+        
         const info = await transporter.sendMail(mailOptions);
         console.log(`>>> [Brevo] Email sent successfully! Message ID: ${info.messageId}`);
+        console.log(`>>> [Brevo] Accepted by: ${info.accepted?.join(', ')}`);
+        console.log(`>>> [Brevo] Rejected: ${info.rejected?.join(', ') || 'none'}`);
         
       } catch (mailErr) {
         console.error(">>> [Brevo] Mail Sending Error:", mailErr.message);
         console.error(">>> [Brevo] Full Error:", mailErr);
-        // Log but don't fail the request
+        // Log but don't fail the request - enquiry is still saved
       }
     } else {
       console.warn(">>> [Brevo] SMTP credentials missing. Email notification skipped.");
-      console.warn(">>> [Brevo] Required env vars: SMTP_HOST, SMTP_USER, SMTP_PASS");
+      console.warn(">>> [Brevo] Required: SMTP_HOST, SMTP_USER, SMTP_PASS");
     }
 
     res.status(201).json({
@@ -120,9 +140,9 @@ exports.testEmailConfig = async (req, res) => {
   try {
     console.log(">>> [Brevo] Testing email configuration...");
     console.log(">>> [Brevo] SMTP_HOST:", process.env.SMTP_HOST);
-    console.log(">>> [Brevo] SMTP_PORT:", process.env.SMTP_PORT || 587);
     console.log(">>> [Brevo] SMTP_USER:", process.env.SMTP_USER);
     console.log(">>> [Brevo] SMTP_PASS exists:", !!process.env.SMTP_PASS);
+    console.log(">>> [Brevo] SUPPORT_EMAIL:", process.env.SUPPORT_EMAIL);
 
     if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
       return res.status(400).json({
@@ -153,26 +173,40 @@ exports.testEmailConfig = async (req, res) => {
       socketTimeout: 10000
     });
 
-    // Send a test email instead of verify (which hangs)
-    console.log(">>> [Brevo] Sending test email...");
+    // Send test email
+    const testEmail = process.env.SUPPORT_EMAIL || "support@charisbilleasy.store";
+    console.log(">>> [Brevo] Sending test email to:", testEmail);
+    
     const info = await transporter.sendMail({
       from: `"BillEasy Test" <${process.env.SMTP_USER}>`,
-      to: "support@charisbilleasy.store",
-      subject: "SMTP Test Email",
-      text: "This is a test email to verify SMTP configuration."
+      to: testEmail,
+      subject: "SMTP Test - BillEasy",
+      text: `This is a test email sent at ${new Date().toLocaleString()}.\n\nIf you received this, your email configuration is working correctly.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">SMTP Test Successful</h2>
+          <p>This is a test email sent at <strong>${new Date().toLocaleString()}</strong>.</p>
+          <p style="background: #dcfce7; padding: 10px; border-radius: 5px; color: #166534;">
+            ✓ If you received this, your email configuration is working correctly!
+          </p>
+          <hr style="margin: 20px 0;">
+          <p style="color: #6b7280; font-size: 12px;">
+            SMTP User: ${process.env.SMTP_USER}<br>
+            Recipient: ${testEmail}
+          </p>
+        </div>
+      `
     });
     
     console.log(">>> [Brevo] Test email sent! Message ID:", info.messageId);
 
     res.json({
       success: true,
-      message: "Email configuration is valid - test email sent",
+      message: "Test email sent successfully",
       messageId: info.messageId,
-      config: {
-        host: process.env.SMTP_HOST,
-        port: 587,
-        user: process.env.SMTP_USER
-      }
+      recipient: testEmail,
+      sender: process.env.SMTP_USER,
+      note: "If you don't receive the email, check: 1) Spam/Junk folder, 2) Brevo sender verification, 3) Email address exists"
     });
   } catch (error) {
     console.error(">>> [Brevo] Test Error:", error.message);
@@ -180,7 +214,7 @@ exports.testEmailConfig = async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message,
-      message: "Email configuration test failed"
+      message: "Email test failed"
     });
   }
 };
