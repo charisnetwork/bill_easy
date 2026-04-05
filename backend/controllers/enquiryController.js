@@ -1,5 +1,5 @@
 const { Enquiry } = require("../models");
-const nodemailer = require("nodemailer");
+const { createTransporter, getSenderAddress, getSupportEmail } = require("../config/mail");
 
 exports.createEnquiry = async (req, res) => {
   try {
@@ -21,35 +21,21 @@ exports.createEnquiry = async (req, res) => {
     console.log(`>>> New Lead Generated: ${name} (${phone})`);
 
     // --- Email Forwarding Logic ---
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const transporter = createTransporter();
+    
+    if (transporter) {
       try {
-        console.log(`>>> [Brevo] Configuring SMTP with host: ${process.env.SMTP_HOST}`);
+        const fromAddress = getSenderAddress();
+        const toAddress = getSupportEmail();
         
-        // Brevo SMTP configuration - Alternative ports for Render compatibility
-        // Try port 587 with STARTTLS first, fallback to 2525 or 465
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: 2525, // Alternative port that often works on Render
-          secure: false, // false for STARTTLS
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-          tls: {
-            rejectUnauthorized: false,
-            ciphers: 'SSLv3'
-          },
-          connectionTimeout: 15000, // 15 seconds
-          greetingTimeout: 15000,
-          socketTimeout: 15000,
-          debug: true, // Enable debug logging
-          logger: true  // Enable logger
-        });
+        console.log(`>>> [Brevo] From: ${fromAddress}`);
+        console.log(`>>> [Brevo] To: ${toAddress}`);
+        console.log(`>>> [Brevo] Reply-To: ${email}`);
 
         const mailOptions = {
-          from: `"BillEasy Enquiries" <${process.env.SMTP_USER}>`,
-          to: process.env.SUPPORT_EMAIL || "support@charisbilleasy.store",
-          replyTo: email,
+          from: fromAddress,         // Must be verified sender in Brevo
+          to: toAddress,             // Recipient
+          replyTo: email,            // Replies go to the person who submitted the form
           subject: `New Enquiry from ${name}`,
           text: `
 NEW ENQUIRY RECEIVED
@@ -106,11 +92,10 @@ Reply to this email to respond to ${name} at ${email}.
           `
         };
 
-        console.log(`>>> [Brevo] Attempting to send email to: ${mailOptions.to}`);
-        
+        console.log(`>>> [Brevo] Sending email...`);
         const info = await transporter.sendMail(mailOptions);
         console.log(`>>> [Brevo] Email sent successfully! Message ID: ${info.messageId}`);
-        console.log(`>>> [Brevo] Response:`, info.response);
+        console.log(`>>> [Brevo] Response: ${info.response}`);
         
       } catch (mailErr) {
         console.error(">>> [Brevo] Mail Sending Error:", mailErr.message);
@@ -118,8 +103,7 @@ Reply to this email to respond to ${name} at ${email}.
         // Log but don't fail the request - enquiry is still saved
       }
     } else {
-      console.warn(">>> [Brevo] SMTP credentials missing. Email notification skipped.");
-      console.warn(">>> [Brevo] Required: SMTP_HOST, SMTP_USER, SMTP_PASS");
+      console.warn(">>> [Brevo] Transporter not created. Email notification skipped.");
     }
 
     res.status(201).json({
@@ -133,72 +117,75 @@ Reply to this email to respond to ${name} at ${email}.
   }
 };
 
-// Test endpoint to verify email configuration with multiple ports
+// Test endpoint to verify email configuration
 exports.testEmailConfig = async (req, res) => {
-  const results = [];
-  
-  const testConfigs = [
-    { port: 587, secure: false, name: 'STARTTLS (587)' },
-    { port: 2525, secure: false, name: 'Alternative (2525)' },
-    { port: 465, secure: true, name: 'SSL (465)' }
-  ];
-
-  for (const config of testConfigs) {
-    try {
-      console.log(`>>> [Brevo] Testing ${config.name}...`);
-      
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: config.port,
-        secure: config.secure,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        tls: {
-          rejectUnauthorized: false,
-          ciphers: 'SSLv3'
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000
-      });
-
-      const testEmail = process.env.SUPPORT_EMAIL || "support@charisbilleasy.store";
-      const info = await transporter.sendMail({
-        from: `"BillEasy Test" <${process.env.SMTP_USER}>`,
-        to: testEmail,
-        subject: `SMTP Test - ${config.name}`,
-        text: `Test email via port ${config.port} at ${new Date().toLocaleString()}`
-      });
-      
-      results.push({
-        config: config.name,
-        port: config.port,
-        success: true,
-        messageId: info.messageId
-      });
-      
-      console.log(`>>> [Brevo] ${config.name} SUCCESS!`);
-      
-    } catch (error) {
-      console.error(`>>> [Brevo] ${config.name} FAILED:`, error.message);
-      results.push({
-        config: config.name,
-        port: config.port,
+  try {
+    console.log(">>> [Brevo] Testing email configuration...");
+    
+    const transporter = createTransporter();
+    
+    if (!transporter) {
+      return res.status(400).json({
         success: false,
-        error: error.message
+        error: "SMTP configuration missing",
+        required: ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"],
+        current: {
+          SMTP_HOST: !!process.env.SMTP_HOST,
+          SMTP_USER: !!process.env.SMTP_USER,
+          SMTP_PASS: !!process.env.SMTP_PASS,
+          SMTP_FROM: process.env.SMTP_FROM || 'support@charisbilleasy.store (default)'
+        }
       });
     }
-  }
 
-  const anySuccess = results.some(r => r.success);
-  
-  res.json({
-    overall: anySuccess ? 'SUCCESS' : 'ALL_FAILED',
-    results: results,
-    recommendation: anySuccess 
-      ? 'Use the successful configuration'
-      : 'All SMTP configurations failed. Check Brevo account or use alternative email service.'
-  });
+    const fromAddress = getSenderAddress();
+    const toAddress = getSupportEmail();
+    
+    console.log(">>> [Brevo] Testing with config:");
+    console.log(">>> [Brevo] From:", fromAddress);
+    console.log(">>> [Brevo] To:", toAddress);
+
+    const info = await transporter.sendMail({
+      from: fromAddress,
+      to: toAddress,
+      subject: "SMTP Configuration Test - BillEasy",
+      text: `This is a test email to verify SMTP configuration.\n\nSent at: ${new Date().toLocaleString()}\nFrom: ${fromAddress}\nTo: ${toAddress}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">SMTP Configuration Test</h2>
+          <p>If you received this email, your Brevo SMTP configuration is working correctly!</p>
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>From:</strong> ${fromAddress}</p>
+            <p style="margin: 5px 0;"><strong>To:</strong> ${toAddress}</p>
+            <p style="margin: 5px 0;"><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+          <p style="color: #6b7280; font-size: 12px;">This is an automated test from BillEasy.</p>
+        </div>
+      `
+    });
+    
+    console.log(">>> [Brevo] Test email sent! Message ID:", info.messageId);
+
+    res.json({
+      success: true,
+      message: "Test email sent successfully",
+      messageId: info.messageId,
+      config: {
+        from: fromAddress,
+        to: toAddress,
+        smtpUser: process.env.SMTP_USER,
+        smtpHost: process.env.SMTP_HOST
+      },
+      note: "If you don't see the email, check your spam folder and verify the sender is authenticated in Brevo."
+    });
+  } catch (error) {
+    console.error(">>> [Brevo] Test Error:", error.message);
+    console.error(">>> [Brevo] Full Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Email configuration test failed",
+      hint: "Make sure 'support@charisbilleasy.store' is added as a verified sender in your Brevo account."
+    });
+  }
 };
