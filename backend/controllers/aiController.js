@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { Invoice, Product, Company, Expense } = require("../models");
+const { Invoice, Product, Company, Expense, Subscription, Plan } = require("../models");
 const { Op } = require("sequelize");
 
 // Initialize Gemini
@@ -21,13 +21,36 @@ const chatWithAssistant = async (req, res) => {
       return res.status(500).json({ error: "AI service is not configured on the server." });
     }
 
+    // CHECK 1: Verify user has Premium or Enterprise plan
+    try {
+      const subscription = await Subscription.findOne({
+        where: { company_id: companyId },
+        include: [{ model: Plan, attributes: ['plan_name'] }]
+      });
+
+      const allowedPlans = ['Premium', 'Enterprise'];
+      const planName = subscription?.Plan?.plan_name;
+
+      if (!subscription || !allowedPlans.includes(planName)) {
+        console.log(`>>> Charis Access Denied: Company ${companyId} has plan '${planName}', not Premium/Enterprise`);
+        return res.status(403).json({
+          answer: "Charis AI Assistant is only available for Premium and Enterprise plan users. Please upgrade your plan to access this feature."
+        });
+      }
+
+      console.log(`>>> Charis Access Granted: Company ${companyId} has ${planName} plan`);
+    } catch (subError) {
+      console.error(">>> Charis Subscription Check Error:", subError.message);
+      return res.status(500).json({ error: "Failed to verify subscription." });
+    }
+
     const lowerQuestion = question.toLowerCase();
     let financialContext = "";
     let inventoryContext = "";
 
-    // 1. Conditional Context Fetching
-    const isFinancialQuery = lowerQuestion.includes('profit') || lowerQuestion.includes('loss') || lowerQuestion.includes('sales') || lowerQuestion.includes('money');
-    const isInventoryQuery = lowerQuestion.includes('stock') || lowerQuestion.includes('inventory');
+    // 1. Conditional Context Fetching - ONLY for in-app business data
+    const isFinancialQuery = lowerQuestion.includes('sale') || lowerQuestion.includes('profit') || lowerQuestion.includes('loss') || lowerQuestion.includes('revenue') || lowerQuestion.includes('income') || lowerQuestion.includes('expense') || lowerQuestion.includes('money') || lowerQuestion.includes('today') || lowerQuestion.includes('total') || lowerQuestion.includes('business');
+    const isInventoryQuery = lowerQuestion.includes('stock') || lowerQuestion.includes('inventory') || lowerQuestion.includes('product') || lowerQuestion.includes('item');
 
     if (isFinancialQuery) {
       console.log(">>> Charis: Fetching Financial Context for relevant query...");
@@ -37,11 +60,22 @@ const chatWithAssistant = async (req, res) => {
           Expense.sum('amount', { where: { company_id: companyId } })
         ]);
 
+        // Get today's sales
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todaySalesData = await Invoice.sum('total_amount', { 
+          where: { 
+            company_id: companyId,
+            invoice_date: { [Op.gte]: today }
+          } 
+        });
+
         const totalSales = parseFloat(totalSalesData || 0);
         const totalExpenses = parseFloat(totalExpensesData || 0);
+        const todaySales = parseFloat(todaySalesData || 0);
         const netProfit = totalSales - totalExpenses;
 
-        financialContext = `\n[Real-time Financial Data] Total Sales: ${totalSales.toFixed(2)}, Total Expenses: ${totalExpenses.toFixed(2)}, Net Profit: ${netProfit.toFixed(2)}.`;
+        financialContext = `\n[Real-time Business Data] Today's Sales: ₹${todaySales.toFixed(2)}, Total Sales: ₹${totalSales.toFixed(2)}, Total Expenses: ₹${totalExpenses.toFixed(2)}, Net Profit: ₹${netProfit.toFixed(2)}.`;
       } catch (dbError) {
         console.error(">>> Charis DB Error (Financial):", dbError.message);
       }
@@ -57,10 +91,12 @@ const chatWithAssistant = async (req, res) => {
           attributes: ['name', 'stock_quantity']
         });
 
+        const totalProducts = await Product.count({ where: { company_id: companyId } });
+
         if (lowStockProducts.length > 0) {
-          inventoryContext = "\n[Real-time Inventory Data] Items running low: " + lowStockProducts.map(p => `${p.name} (${p.stock_quantity} left)`).join(", ");
+          inventoryContext = `\n[Real-time Inventory Data] Total Products: ${totalProducts}. Items running low: ` + lowStockProducts.map(p => `${p.name} (${p.stock_quantity} left)`).join(", ");
         } else {
-          inventoryContext = "\n[Real-time Inventory Data] No products found in inventory.";
+          inventoryContext = `\n[Real-time Inventory Data] Total Products: ${totalProducts}. All items well stocked.`;
         }
       } catch (dbError) {
         console.error(">>> Charis DB Error (Inventory):", dbError.message);
@@ -68,20 +104,24 @@ const chatWithAssistant = async (req, res) => {
     }
 
     const company = await Company.findByPk(companyId, { attributes: ['name'] });
-    const businessName = company?.name || "the business";
+    const businessName = company?.name || "your business";
 
-    // 2. Updated Personality & System Instruction
-    const systemInstruction = `You are Charis, a friendly and intelligent business co-pilot for ${businessName}. 
+    // 2. STRICT System Instruction - ONLY in-app business data, NO coding
+    const systemInstruction = `You are Charis, an AI business assistant for ${businessName}.
 
-Rules:
-- Use the provided real-time data only when it is relevant to the user's question. 
-- If the user says "Hi" or gives general greetings, reply like a normal assistant. Do not force financial numbers into every sentence.
-- Formatting: Avoid using excessive markdown like triple asterisks (***). Use clean, readable text. Use bullet points only for lists of items or stock.
-- Actions: If a user asks you to "create a bill," "make an invoice," or perform any database write action, politely explain that you are an AI assistant and they should use the "Create Sales Invoice" button in the sidebar. Do not pretend to have performed the action.
-- Be concise, professional, and helpful.`;
+STRICT RULES - YOU MUST FOLLOW:
+1. PURPOSE: You ONLY provide in-app business data like sales, expenses, inventory, and profit/loss information.
+2. NO CODING: You NEVER write code, provide scripts, terminal commands, or technical implementation. If asked for code, politely refuse: "I'm here to help with your business data only. For technical support, please contact our support team."
+3. NO EXTERNAL HELP: You cannot help with general knowledge, weather, news, math problems, writing emails, or any non-business tasks.
+4. BUSINESS ONLY: Only answer questions about: Today's sales, Total sales, Expenses, Profit/Loss, Inventory levels, Stock status, Product counts.
+5. GREETINGS: If user says "Hi", respond warmly as a business assistant and offer to help with their sales/expenses/stock data.
+6. NO ACTIONS: You cannot create invoices, bills, or perform any actions. Only READ and REPORT existing data.
+7. CONCISE: Keep answers short and focused on the business data provided.
+
+If asked anything outside business data (coding, general questions, etc.), reply: "I'm Charis, your business data assistant. I can help you with information about your sales, expenses, inventory, and profits. What would you like to know about your business today?"`;
 
     // 3. Build full prompt with system instruction and context
-    const contextStr = (financialContext || inventoryContext) ? `\n[Contextual Data]:${financialContext}${inventoryContext}` : "";
+    const contextStr = (financialContext || inventoryContext) ? `\n[Your Business Data]:${financialContext}${inventoryContext}` : "";
     const fullPrompt = `${systemInstruction}\n\n${contextStr}\n\nUser Question: ${question}`;
 
     // 4. Gemini Call with Fallback
