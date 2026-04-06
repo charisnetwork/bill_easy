@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { User, Company, Plan, Subscription, UserCompany } = require('../models');
+const { Op } = require('sequelize');
 const { sendEmailViaAPI } = require('../utils/mailer');
 
 // Helper function to mask email
@@ -716,7 +717,7 @@ const resetPasswordWithOTP = async (req, res) => {
       where: {
         reset_token: resetToken,
         reset_token_expires_at: {
-          $gt: new Date()
+          [Op.gt]: new Date()
         }
       }
     });
