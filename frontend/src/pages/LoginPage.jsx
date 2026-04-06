@@ -48,13 +48,13 @@ export const LoginPage = () => {
     }
   };
 
-  // Forgot Password Handlers
+  // Forgot Password Handlers - NEW OTP Flow with Brevo API
   const handleRequestReset = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await api.post('/auth/request-reset', { email: resetData.email });
-      setResetData(prev => ({ ...prev, resetToken: response.data.resetToken }));
+      // Use new Brevo API endpoint
+      const response = await api.post('/auth/send-otp', { email: resetData.email });
       toast.success(`OTP sent to ${response.data.maskedEmail}`);
       setResetStep(2);
     } catch (error) {
@@ -64,7 +64,26 @@ export const LoginPage = () => {
     }
   };
 
-  const handleVerifyReset = async (e) => {
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      // Verify OTP and get reset token
+      const response = await api.post('/auth/verify-otp', { 
+        email: resetData.email, 
+        otp: resetData.otp 
+      });
+      setResetData(prev => ({ ...prev, resetToken: response.data.resetToken }));
+      toast.success('OTP verified successfully');
+      setResetStep(3);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Invalid or expired OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     if (resetData.newPassword !== resetData.confirmPassword) {
       toast.error('Passwords do not match');
@@ -76,9 +95,9 @@ export const LoginPage = () => {
     }
     setLoading(true);
     try {
-      await api.post('/auth/verify-reset', {
+      // Reset password using the reset token
+      await api.post('/auth/reset-password-otp', {
         resetToken: resetData.resetToken,
-        otp: resetData.otp,
         newPassword: resetData.newPassword
       });
       toast.success('Password reset successful! Please login.');
@@ -147,7 +166,7 @@ export const LoginPage = () => {
                 )}
 
                 {resetStep === 2 && (
-                  <form onSubmit={(e) => { e.preventDefault(); setResetStep(3); }} className="space-y-4">
+                  <form onSubmit={handleVerifyOTP} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="otp">6-Digit OTP</Label>
                       <Input
@@ -175,7 +194,7 @@ export const LoginPage = () => {
                 )}
 
                 {resetStep === 3 && (
-                  <form onSubmit={handleVerifyReset} className="space-y-4">
+                  <form onSubmit={handleResetPassword} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="new-password">New Password</Label>
                       <div 
