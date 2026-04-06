@@ -2,40 +2,74 @@ const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const path = require("path");
+const fs = require('fs');
 
 /* -------------------------------------------------------------------------
    STORAGE STRATEGY (Priority Order):
-   1. Google Cloud Storage (GCS) - If GCS env vars are configured
+   1. Google Cloud Storage (GCS) - If GCS credentials file exists
    2. Cloudinary - If CLOUDINARY_URL is present
    3. Local Disk Storage - Development fallback
    
    Note: For GCS, we use memoryStorage() and upload from the controller
 -------------------------------------------------------------------------- */
 
-const fs = require('fs');
+// Helper to check if GCS is configured
+const checkGCSConfig = () => {
+  const possiblePaths = [
+    '/etc/secrets/billeasy_bucket',
+    './billeasy_bucket',
+    path.join(__dirname, '../billeasy_bucket'),
+    path.join(__dirname, '../../billeasy_bucket'),
+    process.env.GCS_KEY_FILE
+  ].filter(Boolean);
+  
+  for (const keyPath of possiblePaths) {
+    if (fs.existsSync(keyPath)) {
+      console.log(`[UploadService] Found GCS key file at: ${keyPath}`);
+      return true;
+    }
+  }
+  
+  // Check env vars as fallback
+  if (process.env.GCS_PROJECT_ID && process.env.GCS_BUCKET_NAME) {
+    console.log('[UploadService] Using GCS env vars');
+    return true;
+  }
+  
+  return false;
+};
 
-// Check for GCS credentials (file or env vars)
-const gcsKeyFileExists = fs.existsSync('/etc/secrets/billeasy_bucket') || 
-                         fs.existsSync('./billeasy_bucket') ||
-                         fs.existsSync(process.env.GCS_KEY_FILE || '');
-const isGCSActive = gcsKeyFileExists || !!(process.env.GCS_PROJECT_ID && process.env.GCS_BUCKET_NAME);
+const isGCSActive = checkGCSConfig();
 const isCloudinaryActive = !!process.env.CLOUDINARY_URL;
 
-// Configure Cloudinary if active
+console.log(`[UploadService] GCS Active: ${isGCSActive}, Cloudinary Active: ${isCloudinaryActive}`);
+
+// Configure Cloudinary if active (and GCS is not)
 if (isCloudinaryActive && !isGCSActive) {
   cloudinary.config({
     cloudinary_url: process.env.CLOUDINARY_URL
   });
 }
 
+// Ensure local upload directories exist (for fallback)
+const ensureUploadDir = (folderPath) => {
+  const fullPath = path.join(__dirname, '..', folderPath);
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
+    console.log(`[UploadService] Created directory: ${fullPath}`);
+  }
+};
+
 const getStorage = (folderName) => {
   // If GCS is active, use memory storage (controller will handle GCS upload)
   if (isGCSActive) {
+    console.log(`[UploadService] Using memory storage for ${folderName} (GCS mode)`);
     return multer.memoryStorage();
   }
   
   // If Cloudinary is active, use Cloudinary storage
   if (isCloudinaryActive) {
+    console.log(`[UploadService] Using Cloudinary storage for ${folderName}`);
     return new CloudinaryStorage({
       cloudinary: cloudinary,
       params: {
@@ -47,13 +81,20 @@ const getStorage = (folderName) => {
   }
   
   // Local Fallback Strategy
+  console.log(`[UploadService] Using local disk storage for ${folderName}`);
+  const uploadPath = `uploads/${folderName}`;
+  ensureUploadDir(uploadPath);
+  
   return multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, `uploads/${folderName}`);
+      const destPath = path.join(__dirname, '..', uploadPath);
+      cb(null, destPath);
     },
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname);
-      cb(null, `${folderName}_${Date.now()}${ext}`);
+      const timestamp = Date.now();
+      // Use a simple filename without duplicating folder name
+      cb(null, `file_${timestamp}${ext}`);
     }
   });
 };
