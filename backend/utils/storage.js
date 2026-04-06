@@ -35,8 +35,8 @@ const loadGCSCredentials = () => {
         // Extract project_id and bucket name from the key file
         gcsProjectId = gcsCredentials.project_id;
         
-        // Bucket name can be in the key file or env var
-        gcsBucketName = GCS_BUCKET_NAME || gcsCredentials.bucket_name || `billeasy-${gcsProjectId}`;
+        // Bucket name: env var > explicit default > auto-generated
+        gcsBucketName = GCS_BUCKET_NAME || 'bill-easy-assets';
         
         console.log(`[GCS] Loaded credentials for project: ${gcsProjectId}`);
         return true;
@@ -45,7 +45,7 @@ const loadGCSCredentials = () => {
     
     // Fallback to individual env vars if no file found
     gcsProjectId = process.env.GCS_PROJECT_ID;
-    gcsBucketName = GCS_BUCKET_NAME;
+    gcsBucketName = GCS_BUCKET_NAME || 'bill-easy-assets';
     
     if (gcsProjectId && gcsBucketName) {
       console.log('[GCS] Using environment variables for configuration');
