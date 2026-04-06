@@ -166,12 +166,16 @@ const uploadLogo = async (req, res) => {
     }
 
     // Upload buffer directly to Google Cloud Storage
-    const logoUrl = await uploadImage(
+    const uploadedUrl = await uploadImage(
       req.file.buffer,
       req.file.originalname,
       'company/logos',
       req.file.mimetype
     );
+
+    // Define the public URL (ensures consistent format)
+    const publicUrl = uploadedUrl;
+    console.log('[GCS] Saved public URL to DB: ' + publicUrl);
 
     // Get current company to delete old logo if exists
     const company = await Company.findByPk(companyId);
@@ -179,14 +183,15 @@ const uploadLogo = async (req, res) => {
       await deleteImage(company.logo);
     }
 
+    // Save the public URL to the database
     await Company.update(
-      { logo: logoUrl },
+      { logo: publicUrl },
       { where: { id: companyId } }
     );
 
     res.json({
       success: true,
-      logo: logoUrl
+      logo: publicUrl
     });
 
   } catch (err) {
@@ -213,12 +218,16 @@ const uploadSignature = async (req, res) => {
     }
 
     // Upload buffer directly to Google Cloud Storage
-    const signatureUrl = await uploadImage(
+    const uploadedUrl = await uploadImage(
       req.file.buffer,
       req.file.originalname,
       'company/signatures',
       req.file.mimetype
     );
+
+    // Define the public URL (ensures consistent format)
+    const publicUrl = uploadedUrl;
+    console.log('[GCS] Saved public URL to DB: ' + publicUrl);
 
     // Get current company to delete old signature if exists
     const company = await Company.findByPk(companyId);
@@ -226,14 +235,15 @@ const uploadSignature = async (req, res) => {
       await deleteImage(company.signature);
     }
 
+    // Save the public URL to the database
     await Company.update(
-      { signature: signatureUrl },
+      { signature: publicUrl },
       { where: { id: companyId } }
     );
 
     res.json({
       success: true,
-      signature: signatureUrl
+      signature: publicUrl
     });
 
   } catch (err) {

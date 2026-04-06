@@ -142,6 +142,7 @@ const uploadImage = async (buffer, filename, folder = 'uploads', mimetype = 'ima
     const publicUrl = `https://storage.googleapis.com/${gcsBucketName}/${gcsFileName}`;
     
     console.log(`[GCS] Uploaded: ${gcsFileName} -> ${publicUrl}`);
+    console.log(`[GCS] Saved public URL to DB: ${publicUrl}`);
     
     return publicUrl;
   } catch (error) {
