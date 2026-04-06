@@ -7,36 +7,90 @@ const { Storage } = require('@google-cloud/storage');
 const path = require('path');
 const fs = require('fs');
 
-// Environment variables
-const GCS_PROJECT_ID = process.env.GCS_PROJECT_ID;
+// Configuration - supports both JSON key file and env vars
+const GCS_KEY_FILE_PATH = process.env.GCS_KEY_FILE || '/etc/secrets/billeasy_bucket';
 const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME;
-const GCS_KEY_FILE = process.env.GCS_KEY_FILE; // Path to JSON key file
+
+let gcsCredentials = null;
+let gcsProjectId = null;
+let gcsBucketName = null;
+
+// Try to load credentials from JSON key file
+const loadGCSCredentials = () => {
+  try {
+    // Check if the secret file exists (Render mounts secrets to /etc/secrets/)
+    const possiblePaths = [
+      GCS_KEY_FILE_PATH,
+      '/etc/secrets/billeasy_bucket',
+      './billeasy_bucket',
+      path.join(__dirname, '../../billeasy_bucket')
+    ];
+    
+    for (const keyPath of possiblePaths) {
+      if (fs.existsSync(keyPath)) {
+        console.log(`[GCS] Found key file at: ${keyPath}`);
+        const keyFileContent = fs.readFileSync(keyPath, 'utf8');
+        gcsCredentials = JSON.parse(keyFileContent);
+        
+        // Extract project_id and bucket name from the key file
+        gcsProjectId = gcsCredentials.project_id;
+        
+        // Bucket name can be in the key file or env var
+        gcsBucketName = GCS_BUCKET_NAME || gcsCredentials.bucket_name || `billeasy-${gcsProjectId}`;
+        
+        console.log(`[GCS] Loaded credentials for project: ${gcsProjectId}`);
+        return true;
+      }
+    }
+    
+    // Fallback to individual env vars if no file found
+    gcsProjectId = process.env.GCS_PROJECT_ID;
+    gcsBucketName = GCS_BUCKET_NAME;
+    
+    if (gcsProjectId && gcsBucketName) {
+      console.log('[GCS] Using environment variables for configuration');
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('[GCS] Error loading credentials:', error.message);
+    return false;
+  }
+};
 
 // Check if GCS is configured
-const isGCSConfigured = GCS_PROJECT_ID && GCS_BUCKET_NAME && GCS_KEY_FILE;
+const isGCSConfigured = loadGCSCredentials();
 
 let storage;
 let bucket;
 
 if (isGCSConfigured) {
   try {
-    // Check if key file exists
-    if (!fs.existsSync(GCS_KEY_FILE)) {
-      console.error(`[GCS] Key file not found at: ${GCS_KEY_FILE}`);
-      console.error('[GCS] Please ensure the JSON key file path is correct');
-    } else {
+    if (gcsCredentials) {
+      // Use credentials from JSON file
       storage = new Storage({
-        projectId: GCS_PROJECT_ID,
-        keyFilename: GCS_KEY_FILE,
+        projectId: gcsProjectId,
+        credentials: {
+          client_email: gcsCredentials.client_email,
+          private_key: gcsCredentials.private_key,
+        },
       });
-      bucket = storage.bucket(GCS_BUCKET_NAME);
-      console.log(`[GCS] Connected to bucket: ${GCS_BUCKET_NAME}`);
+    } else {
+      // Use key file path from env
+      storage = new Storage({
+        projectId: gcsProjectId,
+        keyFilename: GCS_KEY_FILE_PATH,
+      });
     }
+    
+    bucket = storage.bucket(gcsBucketName);
+    console.log(`[GCS] Connected to bucket: ${gcsBucketName}`);
   } catch (error) {
     console.error('[GCS] Failed to initialize:', error.message);
   }
 } else {
-  console.log('[GCS] Not configured. Set GCS_PROJECT_ID, GCS_BUCKET_NAME, and GCS_KEY_FILE env vars.');
+  console.log('[GCS] Not configured. Set GCS credentials file or env vars.');
 }
 
 /**
@@ -49,7 +103,7 @@ if (isGCSConfigured) {
  */
 const uploadImage = async (buffer, filename, folder = 'uploads', mimetype = 'image/jpeg') => {
   if (!bucket) {
-    throw new Error('GCS not configured. Check environment variables.');
+    throw new Error('GCS not configured. Check credentials file or environment variables.');
   }
 
   try {
@@ -76,7 +130,7 @@ const uploadImage = async (buffer, filename, folder = 'uploads', mimetype = 'ima
     await file.makePublic();
 
     // Return the public URL
-    const publicUrl = `https://storage.googleapis.com/${GCS_BUCKET_NAME}/${gcsFileName}`;
+    const publicUrl = `https://storage.googleapis.com/${gcsBucketName}/${gcsFileName}`;
     
     console.log(`[GCS] Uploaded: ${gcsFileName} -> ${publicUrl}`);
     
@@ -96,7 +150,7 @@ const deleteImage = async (fileUrl) => {
 
   try {
     // Extract file path from URL
-    const urlPattern = new RegExp(`https://storage.googleapis.com/${GCS_BUCKET_NAME}/(.+)`);
+    const urlPattern = new RegExp(`https://storage.googleapis.com/${gcsBucketName}/(.+)`);
     const match = fileUrl.match(urlPattern);
     
     if (match && match[1]) {

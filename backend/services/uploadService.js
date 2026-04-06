@@ -12,7 +12,13 @@ const path = require("path");
    Note: For GCS, we use memoryStorage() and upload from the controller
 -------------------------------------------------------------------------- */
 
-const isGCSActive = !!(process.env.GCS_PROJECT_ID && process.env.GCS_BUCKET_NAME && process.env.GCS_KEY_FILE);
+const fs = require('fs');
+
+// Check for GCS credentials (file or env vars)
+const gcsKeyFileExists = fs.existsSync('/etc/secrets/billeasy_bucket') || 
+                         fs.existsSync('./billeasy_bucket') ||
+                         fs.existsSync(process.env.GCS_KEY_FILE || '');
+const isGCSActive = gcsKeyFileExists || !!(process.env.GCS_PROJECT_ID && process.env.GCS_BUCKET_NAME);
 const isCloudinaryActive = !!process.env.CLOUDINARY_URL;
 
 // Configure Cloudinary if active
