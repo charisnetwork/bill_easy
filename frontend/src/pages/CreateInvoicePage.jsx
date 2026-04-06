@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { invoiceAPI, customerAPI, productAPI, companyAPI } from '../services/api';
-import { getIndustryConfig } from '../lib/industryConfig';
+import { getIndustryConfig, INDUSTRY_GROUPS } from '../lib/industryConfig';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -13,7 +13,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '../components/ui/table';
-import { ArrowLeft, Plus, Trash2, Save, Calendar, Wallet } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { ArrowLeft, Plus, Trash2, Save, Calendar, Wallet, Wrench, Package } from 'lucide-react';
 import { Switch } from '../components/ui/switch';
 import { toast } from 'sonner';
 
@@ -32,6 +33,7 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [services, setServices] = useState([]);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [industry, setIndustry] = useState('General Store');
   const [industryConfig, setIndustryConfig] = useState(getIndustryConfig('General Store'));
@@ -45,6 +47,7 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
     notes: '',
     terms: 'Payment is due within 30 days.',
     items: [],
+    service_items: [],
     extra_fields: {},
     industry_metadata: {},
     eway_bill_number: '',
@@ -76,7 +79,11 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
           companyAPI.get()
         ]);
         setCustomers(customersRes.data.customers);
-        setProducts(productsRes.data.products);
+        
+        // Separate products and services
+        const allProducts = productsRes.data.products || [];
+        setProducts(allProducts.filter(p => p.type === 'product' || !p.type));
+        setServices(allProducts.filter(p => p.type === 'service'));
         
         const selectedIndustry = companyRes.data.business_category || 'General Store';
         setIndustry(selectedIndustry);
@@ -90,6 +97,11 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
           const invoiceRes = await invoiceAPI.get(id);
           const inv = invoiceRes.data;
           setInvoiceNumber(inv.invoice_number);
+          
+          // Separate product and service items
+          const productItems = inv.items?.filter(item => item.item_type !== 'service') || [];
+          const serviceItems = inv.items?.filter(item => item.item_type === 'service') || [];
+          
           setFormData({
             customer_id: inv.customer_id,
             invoice_date: inv.invoice_date.split('T')[0],
@@ -98,13 +110,25 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
             discount_type: inv.discount_type || 'fixed',
             notes: inv.notes || '',
             terms: inv.terms || companyRes.data.terms_conditions,
-            items: inv.items.map(item => ({
+            items: productItems.map(item => ({
               product_id: item.product_id,
               quantity: item.quantity,
               unit_price: item.unit_price,
               discount: item.discount || 0,
               tax_rate: item.tax_rate || 18,
-              description: item.description || ''
+              description: item.description || '',
+              item_type: 'product',
+              batch_number: item.batch_number || '',
+              expiry_date: item.expiry_date || ''
+            })),
+            service_items: serviceItems.map(item => ({
+              product_id: item.product_id,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              discount: item.discount || 0,
+              tax_rate: item.tax_rate || 18,
+              description: item.description || '',
+              item_type: 'service'
             })),
             extra_fields: inv.extra_fields || {},
             industry_metadata: inv.industry_metadata || {},
@@ -133,7 +157,8 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
                 unit_price: item.unit_price,
                 tax_rate: item.tax_rate || 18,
                 discount: 0,
-                description: item.description || ''
+                description: item.description || '',
+                item_type: 'product'
               }))
             }));
           }
@@ -145,46 +170,45 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
     fetchData();
   }, [id, isEdit]);
 
-  const addItem = () => {
+  // Product Items
+  const addProductItem = () => {
     setFormData({
       ...formData,
       items: [
         ...formData.items,
-        { product_id: '', quantity: 1, unit_price: 0, discount: 0, tax_rate: 18 }
+        { product_id: '', quantity: 1, unit_price: 0, discount: 0, tax_rate: 18, item_type: 'product' }
       ]
     });
   };
 
-  const removeItem = (index) => {
+  const removeProductItem = (index) => {
     setFormData({
       ...formData,
       items: formData.items.filter((_, i) => i !== index)
     });
   };
 
-  const updateItem = (index, field, value) => {
+  const updateProductItem = (index, field, value) => {
     const newItems = [...formData.items];
     
     if (field === 'product_id') {
       const product = products.find(p => p.id === value);
       if (product) {
-        if (product.type === 'product' && parseFloat(product.stock_quantity) <= 0) {
+        if (parseFloat(product.stock_quantity) <= 0) {
           toast.error(`${product.name} is out of stock!`);
           return;
         }
         newItems[index][field] = value;
         newItems[index].unit_price = parseFloat(product.sale_price);
         newItems[index].tax_rate = parseFloat(product.gst_rate);
+        newItems[index].hsn_code = product.hsn_code || '';
+        newItems[index].sku = product.sku || '';
       }
     } else if (field === 'quantity') {
       const product = products.find(p => p.id === newItems[index].product_id);
-      if (product && product.type === 'product') {
-        if (parseFloat(value) > parseFloat(product.stock_quantity)) {
-          toast.error(`Only ${product.stock_quantity} units available in stock`);
-          newItems[index][field] = product.stock_quantity;
-        } else {
-          newItems[index][field] = value;
-        }
+      if (product && parseFloat(value) > parseFloat(product.stock_quantity)) {
+        toast.error(`Only ${product.stock_quantity} units available in stock`);
+        newItems[index][field] = product.stock_quantity;
       } else {
         newItems[index][field] = value;
       }
@@ -193,6 +217,41 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
     }
     
     setFormData({ ...formData, items: newItems });
+  };
+
+  // Service Items
+  const addServiceItem = () => {
+    setFormData({
+      ...formData,
+      service_items: [
+        ...formData.service_items,
+        { product_id: '', quantity: 1, unit_price: 0, discount: 0, tax_rate: 18, item_type: 'service' }
+      ]
+    });
+  };
+
+  const removeServiceItem = (index) => {
+    setFormData({
+      ...formData,
+      service_items: formData.service_items.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateServiceItem = (index, field, value) => {
+    const newItems = [...formData.service_items];
+    
+    if (field === 'product_id') {
+      const service = services.find(s => s.id === value);
+      if (service) {
+        newItems[index][field] = value;
+        newItems[index].unit_price = parseFloat(service.sale_price);
+        newItems[index].tax_rate = parseFloat(service.gst_rate);
+      }
+    } else {
+      newItems[index][field] = value;
+    }
+    
+    setFormData({ ...formData, service_items: newItems });
   };
 
   const calculateItemTotal = (item) => {
@@ -208,11 +267,10 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
   };
 
   const calculateTotals = () => {
-    const items = formData.items;
-    let subtotal = 0;
-    let taxAmount = 0;
-    
-    items.forEach(item => {
+    // Calculate product totals
+    let productSubtotal = 0;
+    let productTax = 0;
+    formData.items.forEach(item => {
       const qty = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unit_price) || 0;
       const itemDiscount = parseFloat(item.discount) || 0;
@@ -221,9 +279,28 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
       const itemSubtotal = (qty * price) - itemDiscount;
       const itemTax = (itemSubtotal * taxRate) / 100;
       
-      subtotal += itemSubtotal;
-      taxAmount += itemTax;
+      productSubtotal += itemSubtotal;
+      productTax += itemTax;
     });
+
+    // Calculate service totals
+    let serviceSubtotal = 0;
+    let serviceTax = 0;
+    formData.service_items.forEach(item => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.unit_price) || 0;
+      const itemDiscount = parseFloat(item.discount) || 0;
+      const taxRate = parseFloat(item.tax_rate) || 0;
+      
+      const itemSubtotal = (qty * price) - itemDiscount;
+      const itemTax = (itemSubtotal * taxRate) / 100;
+      
+      serviceSubtotal += itemSubtotal;
+      serviceTax += itemTax;
+    });
+
+    const subtotal = productSubtotal + serviceSubtotal;
+    const taxAmount = productTax + serviceTax;
 
     let discountAmount = 0;
     if (formData.discount_type === 'percentage') {
@@ -256,6 +333,10 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
     }
 
     return {
+      productSubtotal,
+      productTax,
+      serviceSubtotal,
+      serviceTax,
       subtotal,
       taxAmount,
       discountAmount,
@@ -277,14 +358,16 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
       return;
     }
     
-    if (formData.items.length === 0) {
-      toast.error('Please add at least one item');
+    // Validate items
+    const allItems = [...formData.items, ...formData.service_items];
+    if (allItems.length === 0) {
+      toast.error('Please add at least one item or service');
       return;
     }
 
-    const invalidItems = formData.items.filter(item => 
+    const invalidItems = allItems.filter(item => 
       !item.product_id || item.product_id === "" ||
-      (industryConfig.fields.showQty && !item.quantity) || 
+      !item.quantity || 
       !item.unit_price
     );
     if (invalidItems.length > 0) {
@@ -294,6 +377,26 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
 
     setLoading(true);
     try {
+      // Combine product and service items
+      const combinedItems = [
+        ...formData.items.map(item => ({
+          ...item,
+          quantity: parseFloat(item.quantity),
+          unit_price: parseFloat(item.unit_price),
+          discount: parseFloat(item.discount) || 0,
+          tax_rate: parseFloat(item.tax_rate) || 0,
+          item_type: 'product'
+        })),
+        ...formData.service_items.map(item => ({
+          ...item,
+          quantity: parseFloat(item.quantity),
+          unit_price: parseFloat(item.unit_price),
+          discount: parseFloat(item.discount) || 0,
+          tax_rate: parseFloat(item.tax_rate) || 0,
+          item_type: 'service'
+        }))
+      ];
+
       const data = {
         ...formData,
         customer_id: formData.customer_id || null,
@@ -301,14 +404,7 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
         wallet_amount: totals.walletUsed,
         tds_rate: formData.apply_tds ? parseFloat(formData.tds_rate) : 0,
         tcs_rate: formData.apply_tcs ? parseFloat(formData.tcs_rate) : 0,
-        items: formData.items.map(item => ({
-          product_id: item.product_id,
-          quantity: industryConfig.fields.showQty ? parseFloat(item.quantity) : 1,
-          unit_price: parseFloat(item.unit_price),
-          discount: parseFloat(item.discount) || 0,
-          tax_rate: parseFloat(item.tax_rate) || 0,
-          description: item.description || ''
-        }))
+        items: combinedItems
       };
       
       if (isEdit) {
@@ -327,6 +423,432 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
     }
   };
 
+  // Render item table based on industry
+  const renderItemTable = () => {
+    const isAutomobile = industryConfig.group === INDUSTRY_GROUPS.AUTOMOBILE_SERVICE;
+    
+    if (isAutomobile) {
+      return (
+        <Tabs defaultValue="products" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Spare Parts ({formData.items.length})
+            </TabsTrigger>
+            <TabsTrigger value="services" className="flex items-center gap-2">
+              <Wrench className="w-4 h-4" />
+              Services ({formData.service_items.length})
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="products">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Spare Parts & Materials</CardTitle>
+                <Button type="button" variant="outline" onClick={addProductItem}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Part
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {formData.items.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>No parts added yet</p>
+                    <Button type="button" variant="outline" onClick={addProductItem} className="mt-4">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add First Part
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Part Name</TableHead>
+                        <TableHead>Part No</TableHead>
+                        <TableHead>Qty</TableHead>
+                        <TableHead>Rate</TableHead>
+                        <TableHead>GST%</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {formData.items.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Select
+                              value={item.product_id}
+                              onValueChange={(value) => updateProductItem(index, 'product_id', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select part" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} (₹{product.sale_price})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="text"
+                              value={item.sku || ''}
+                              onChange={(e) => updateProductItem(index, 'sku', e.target.value)}
+                              placeholder="Part No"
+                              className="w-24"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateProductItem(index, 'quantity', e.target.value)}
+                              className="w-16"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.unit_price}
+                              onChange={(e) => updateProductItem(index, 'unit_price', e.target.value)}
+                              className="w-24"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={String(item.tax_rate)}
+                              onValueChange={(value) => updateProductItem(index, 'tax_rate', value)}
+                            >
+                              <SelectTrigger className="w-16">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0">0%</SelectItem>
+                                <SelectItem value="5">5%</SelectItem>
+                                <SelectItem value="12">12%</SelectItem>
+                                <SelectItem value="18">18%</SelectItem>
+                                <SelectItem value="28">28%</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(calculateItemTotal(item))}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeProductItem(index)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+                
+                {formData.items.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-blue-700 font-medium">Parts Subtotal:</span>
+                      <span className="font-mono font-bold">{formatCurrency(totals.productSubtotal + totals.productTax)}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="services">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Services & Labour</CardTitle>
+                <Button type="button" variant="outline" onClick={addServiceItem}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Service
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {formData.service_items.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>No services added yet</p>
+                    <Button type="button" variant="outline" onClick={addServiceItem} className="mt-4">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add First Service
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Service Description</TableHead>
+                        <TableHead>Hours</TableHead>
+                        <TableHead>Rate</TableHead>
+                        <TableHead>GST%</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {formData.service_items.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Select
+                              value={item.product_id}
+                              onValueChange={(value) => updateServiceItem(index, 'product_id', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select service" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {services.length > 0 ? services.map((service) => (
+                                  <SelectItem key={service.id} value={service.id}>
+                                    {service.name} (₹{service.sale_price}/hr)
+                                  </SelectItem>
+                                )) : (
+                                  <SelectItem value="custom">Custom Service</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="0.5"
+                              step="0.5"
+                              value={item.quantity}
+                              onChange={(e) => updateServiceItem(index, 'quantity', e.target.value)}
+                              className="w-16"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.unit_price}
+                              onChange={(e) => updateServiceItem(index, 'unit_price', e.target.value)}
+                              className="w-24"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={String(item.tax_rate)}
+                              onValueChange={(value) => updateServiceItem(index, 'tax_rate', value)}
+                            >
+                              <SelectTrigger className="w-16">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0">0%</SelectItem>
+                                <SelectItem value="5">5%</SelectItem>
+                                <SelectItem value="12">12%</SelectItem>
+                                <SelectItem value="18">18%</SelectItem>
+                                <SelectItem value="28">28%</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(calculateItemTotal(item))}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeServiceItem(index)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+                
+                {formData.service_items.length > 0 && (
+                  <div className="mt-4 p-3 bg-emerald-50 rounded-lg">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-emerald-700 font-medium">Services Subtotal:</span>
+                      <span className="font-mono font-bold">{formatCurrency(totals.serviceSubtotal + totals.serviceTax)}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      );
+    }
+    
+    // Standard single-table view for other industries
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Items</CardTitle>
+          <Button type="button" variant="outline" onClick={addProductItem}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Item
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {formData.items.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <p>No items added yet</p>
+              <Button type="button" variant="outline" onClick={addProductItem} className="mt-4">
+                <Plus className="w-4 h-4 mr-2" />
+                Add First Item
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-1/3">{industryConfig.labels.itemName}</TableHead>
+                  {industryConfig.fields.showBatch && <TableHead>Batch</TableHead>}
+                  {industryConfig.fields.showExpiry && <TableHead>Expiry</TableHead>}
+                  {industryConfig.fields.showQty && <TableHead>{industryConfig.labels.qty}</TableHead>}
+                  <TableHead>{industryConfig.labels.price}</TableHead>
+                  <TableHead>GST%</TableHead>
+                  {industryConfig.fields.showDiscount && <TableHead>Discount</TableHead>}
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {formData.items.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <Select
+                          value={item.product_id}
+                          onValueChange={(value) => updateProductItem(index, 'product_id', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={`Select ${industryConfig.labels.itemName.toLowerCase()}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {products.map((product) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                {product.name} (₹{product.sale_price})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {industryConfig.fields.showDescription && (
+                          <Textarea
+                            placeholder="Description"
+                            value={item.description || ''}
+                            onChange={(e) => updateProductItem(index, 'description', e.target.value)}
+                            className="text-xs min-h-[60px]"
+                          />
+                        )}
+                      </div>
+                    </TableCell>
+                    {industryConfig.fields.showBatch && (
+                      <TableCell>
+                        <Input
+                          type="text"
+                          value={item.batch_number || ''}
+                          onChange={(e) => updateProductItem(index, 'batch_number', e.target.value)}
+                          placeholder="Batch#"
+                          className="w-20"
+                        />
+                      </TableCell>
+                    )}
+                    {industryConfig.fields.showExpiry && (
+                      <TableCell>
+                        <Input
+                          type="date"
+                          value={item.expiry_date || ''}
+                          onChange={(e) => updateProductItem(index, 'expiry_date', e.target.value)}
+                          className="w-28"
+                        />
+                      </TableCell>
+                    )}
+                    {industryConfig.fields.showQty && (
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="1"
+                          step="0.01"
+                          value={item.quantity}
+                          onChange={(e) => updateProductItem(index, 'quantity', e.target.value)}
+                          className="w-20"
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unit_price}
+                        onChange={(e) => updateProductItem(index, 'unit_price', e.target.value)}
+                        className="w-24"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={String(item.tax_rate)}
+                        onValueChange={(value) => updateProductItem(index, 'tax_rate', value)}
+                      >
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">0%</SelectItem>
+                          <SelectItem value="5">5%</SelectItem>
+                          <SelectItem value="12">12%</SelectItem>
+                          <SelectItem value="18">18%</SelectItem>
+                          <SelectItem value="28">28%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    {industryConfig.fields.showDiscount && (
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.discount}
+                          onChange={(e) => updateProductItem(index, 'discount', e.target.value)}
+                          className="w-20"
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right font-mono">
+                      {formatCurrency(calculateItemTotal(item))}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeProductItem(index)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="create-invoice-page">
       <div className="flex items-center gap-4">
@@ -335,8 +857,10 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
           Back
         </Button>
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl font-bold text-slate-900">{isEdit ? 'Edit' : 'Create'} Sales</h1>
-          <p className="text-slate-600">Invoice #{invoiceNumber}</p>
+          <h1 className="font-heading text-2xl md:text-3xl font-bold text-slate-900">
+            {isEdit ? 'Edit' : 'Create'} {industryConfig.labels.total}
+          </h1>
+          <p className="text-slate-600">Invoice #{invoiceNumber} • {industry}</p>
         </div>
       </div>
 
@@ -430,7 +954,7 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
                 <CardTitle>{industry} Details</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   {industryConfig.extraFields.map((field) => (
                     <div key={field.name} className="space-y-2">
                       <Label>{field.label}</Label>
@@ -467,6 +991,21 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
               <CardTitle>Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Show separate totals for automobile */}
+              {industryConfig.group === INDUSTRY_GROUPS.AUTOMOBILE_SERVICE && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-blue-600">Parts Subtotal</span>
+                    <span className="font-mono">{formatCurrency(totals.productSubtotal + totals.productTax)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-emerald-600">Services Subtotal</span>
+                    <span className="font-mono">{formatCurrency(totals.serviceSubtotal + totals.serviceTax)}</span>
+                  </div>
+                  <div className="border-t border-dashed pt-2"></div>
+                </>
+              )}
+              
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Subtotal</span>
                 <span className="font-mono">{formatCurrency(totals.subtotal)}</span>
@@ -509,184 +1048,8 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
           </Card>
         </div>
 
-        {/* Items */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Items</CardTitle>
-            <Button type="button" variant="outline" onClick={addItem} data-testid="add-item-btn">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Item
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {formData.items.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
-                <p>No items added yet</p>
-                <div className="mt-4 flex flex-col items-center gap-2">
-                  <Button type="button" variant="outline" onClick={addItem} data-testid="add-item-btn-empty">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add First Item
-                  </Button>
-                  <p className="text-xs text-slate-400">Press Enter to add first item</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-1/3">{industryConfig.labels.itemName}</TableHead>
-                      {industryConfig.fields.showQty && <TableHead>{industryConfig.labels.qty}</TableHead>}
-                      <TableHead>{industryConfig.labels.price}</TableHead>
-                      <TableHead>GST%</TableHead>
-                      {industryConfig.fields.showDiscount && <TableHead>Discount</TableHead>}
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="w-12"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {formData.items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <div className="space-y-2">
-                            <Select
-                              value={item.product_id}
-                              onValueChange={(value) => updateItem(index, 'product_id', value)}
-                            >
-                              <SelectTrigger data-testid={`item-product-${index}`}>
-                                <SelectValue placeholder={`Select ${industryConfig.labels.itemName.toLowerCase()}`} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {products.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.name} ({formatCurrency(product.sale_price)})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {industryConfig.fields.showDescription && (
-                              <Textarea
-                                placeholder="Description"
-                                value={item.description || ''}
-                                onChange={(e) => updateItem(index, 'description', e.target.value)}
-                                className="text-xs min-h-[60px]"
-                              />
-                            )}
-                          </div>
-                        </TableCell>
-                        {industryConfig.fields.showQty && (
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              step="0.01"
-                              value={item.quantity}
-                              onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  addItem();
-                                }
-                              }}
-                              className="w-20"
-                              data-testid={`item-qty-${index}`}
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.unit_price}
-                            onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                if (index === formData.items.length - 1) {
-                                  addItem();
-                                }
-                              }
-                            }}
-                            className="w-24"
-                            data-testid={`item-price-${index}`}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={String(item.tax_rate)}
-                            onValueChange={(value) => updateItem(index, 'tax_rate', value)}
-                          >
-                            <SelectTrigger className="w-20">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">0%</SelectItem>
-                              <SelectItem value="5">5%</SelectItem>
-                              <SelectItem value="12">12%</SelectItem>
-                              <SelectItem value="18">18%</SelectItem>
-                              <SelectItem value="28">28%</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        {industryConfig.fields.showDiscount && (
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.discount}
-                              onChange={(e) => updateItem(index, 'discount', e.target.value)}
-                              className="w-20"
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell className="text-right font-mono">
-                          {formatCurrency(calculateItemTotal(item))}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeItem(index)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Another Item
-                    </Button>
-                    <p className="text-xs text-slate-400">Press Enter on Price/Qty to add next</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400 italic">Press Alt+S to save</span>
-                    <Button 
-                      type="button" 
-                      variant="default" 
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => handleSubmit()}
-                      disabled={loading}
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      Create Invoice (Double Enter)
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Items - Industry Specific */}
+        {renderItemTable()}
 
         {/* Additional Details */}
         <div className="grid md:grid-cols-3 gap-6">
@@ -802,7 +1165,7 @@ export const CreateInvoicePage = ({ isEdit = false }) => {
             data-testid="save-invoice-btn"
           >
             <Save className="w-4 h-4 mr-2" />
-            {loading ? 'Creating...' : 'Create Invoice'}
+            {loading ? 'Creating...' : `Create ${industryConfig.labels.total}`}
           </Button>
         </div>
       </form>

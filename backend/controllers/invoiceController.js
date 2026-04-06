@@ -104,6 +104,7 @@ const createInvoice = async (req, res) => {
       const price = parseFloat(item.unit_price) || 0;
       const discount = parseFloat(item.discount) || 0;
       const taxRate = parseFloat(item.tax_rate) || 0;
+      const itemType = item.item_type || 'product';
       
       const itemSubtotal = (qty * price) - discount;
       const tax = (itemSubtotal * taxRate) / 100;
@@ -114,6 +115,7 @@ const createInvoice = async (req, res) => {
       
       return {
         ...item,
+        item_type: itemType,
         total: total.toFixed(2)
       };
     });
@@ -152,8 +154,13 @@ const createInvoice = async (req, res) => {
       // If still no godown_id, it will be null (optional)
     }
 
-    // Stock Validation
+    // Stock Validation (only for products, not services)
     for (const item of items) {
+      const itemType = item.item_type || 'product';
+      
+      // Skip stock validation for service items
+      if (itemType === 'service') continue;
+      
       const qty = parseFloat(item.quantity) || 0;
       const product = await Product.findByPk(item.product_id, { transaction });
       
@@ -229,40 +236,55 @@ const createInvoice = async (req, res) => {
     }, { transaction });
 
     for (const item of processedItems) {
+      // Create InvoiceItem with all fields including industry-specific ones
       await InvoiceItem.create({
         invoice_id: invoice.id,
         product_id: item.product_id,
         quantity: item.quantity,
         unit_price: item.unit_price,
+        discount: item.discount || 0,
+        tax_rate: item.tax_rate || 0,
+        tax_amount: item.tax_amount || 0,
         total: item.total,
-        description: item.description || ''
+        description: item.description || '',
+        // Industry-specific fields
+        item_type: item.item_type || 'product',
+        batch_number: item.batch_number || null,
+        expiry_date: item.expiry_date || null,
+        hsn_code: item.hsn_code || null,
+        sku: item.sku || null,
+        lr_number: item.lr_number || null,
+        weight: item.weight || null
       }, { transaction });
 
-      await Product.decrement("stock_quantity", {
-        by: item.quantity,
-        where: { id: item.product_id },
-        transaction
-      });
-
-      // Godown stock deduction
-      if (invoice.godown_id) {
-        await StockLevel.decrement("quantity", {
+      // Only deduct stock for products, not services
+      if (item.item_type !== 'service') {
+        await Product.decrement("stock_quantity", {
           by: item.quantity,
-          where: { product_id: item.product_id, godown_id: invoice.godown_id },
+          where: { id: item.product_id },
           transaction
         });
 
-        // Record movement
-        await StockMovement.create({
-          company_id: req.companyId,
-          product_id: item.product_id,
-          godown_id: invoice.godown_id,
-          type: 'out',
-          quantity: item.quantity,
-          reference_type: 'invoice',
-          reference_id: invoice.id,
-          notes: `Invoice #${invoice.invoice_number || invoiceNumber}`
-        }, { transaction });
+        // Godown stock deduction
+        if (invoice.godown_id) {
+          await StockLevel.decrement("quantity", {
+            by: item.quantity,
+            where: { product_id: item.product_id, godown_id: invoice.godown_id },
+            transaction
+          });
+
+          // Record movement
+          await StockMovement.create({
+            company_id: req.companyId,
+            product_id: item.product_id,
+            godown_id: invoice.godown_id,
+            type: 'out',
+            quantity: item.quantity,
+            reference_type: 'invoice',
+            reference_id: invoice.id,
+            notes: `Invoice #${invoice.invoice_number || invoiceNumber}`
+          }, { transaction });
+        }
       }
     }
 

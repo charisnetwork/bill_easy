@@ -260,7 +260,16 @@ const InvoiceItem = sequelize.define('InvoiceItem',{
   tax_rate: { type: DataTypes.DECIMAL(5,2), defaultValue: 0 },
   tax_amount: { type: DataTypes.DECIMAL(12,2), defaultValue: 0 },
   total:{ type:DataTypes.DECIMAL(12,2), allowNull:false },
-  description:{ type:DataTypes.TEXT }
+  description:{ type:DataTypes.TEXT },
+  // Industry-specific fields
+  item_type: { type: DataTypes.ENUM('product', 'service'), defaultValue: 'product' },
+  batch_number: { type: DataTypes.STRING },
+  expiry_date: { type: DataTypes.DATEONLY },
+  hsn_code: { type: DataTypes.STRING },
+  sku: { type: DataTypes.STRING },
+  // For logistics/transport
+  lr_number: { type: DataTypes.STRING },
+  weight: { type: DataTypes.DECIMAL(10,2) }
 }, { tableName: 'invoice_items' });
 
 const Purchase = sequelize.define('Purchase',{
