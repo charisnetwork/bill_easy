@@ -35,6 +35,52 @@ const app = express();
 app.set('trust proxy', 1);
 
 /* =========================================
+   CORS - MUST BE FIRST
+========================================= */
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : [
+    'https://charisbilleasy.store',
+    'https://www.charisbilleasy.store',
+    'https://admin.charisbilleasy.store',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:3021'
+  ];
+
+// Simple CORS middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Check if origin is allowed
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-company-id, x-admin-secret');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  
+  next();
+});
+
+// Also use cors package as backup
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id', 'x-admin-secret'],
+  credentials: true,
+  maxAge: 86400
+}));
+
+/* =========================================
    SECURITY
 ========================================= */
 
@@ -43,33 +89,6 @@ app.use(
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" }
-  })
-);
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = process.env.ALLOWED_ORIGINS 
-        ? process.env.ALLOWED_ORIGINS.split(',') 
-        : [
-          'https://charisbilleasy.store',
-          'https://admin.charisbilleasy.store',
-          'http://localhost:3000',
-          'http://localhost:3021'
-        ];
-      
-      // Allow requests with no origin (e.g., mobile apps, curl requests)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`[CORS] Rejected origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id'],
-    credentials: true,
-    maxAge: 86400 // 24 hours
   })
 );
 
@@ -217,7 +236,7 @@ const seedPlans = async () => {
           inventory_management: true,
           reports: true,
           quotations: true,
-          eway_bills: true, // Limited access check in Guard
+          eway_bills: true,
           multi_godowns: true,
           staff_attendance_payroll: true,
           manage_businesses: 2,
