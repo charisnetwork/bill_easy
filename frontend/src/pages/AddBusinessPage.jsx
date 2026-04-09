@@ -13,8 +13,10 @@ import {
   Mail, 
   MapPin,
   Loader2,
-  Search
+  Search,
+  Briefcase
 } from 'lucide-react';
+import { industries } from "../lib/industryConfig";
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -48,7 +50,22 @@ const formSchema = z.object({
   state: z.string().min(2, "State is required"),
   pincode: z.string().length(6, "Pincode must be 6 digits"),
   gst_number: z.string().optional().or(z.literal("")),
+  company_type: z.string().min(1, "Company type is required"),
+  business_category: z.string().min(1, "Business category is required"),
 });
+
+const companyTypes = [
+  "Sole Proprietorship",
+  "Partnership", 
+  "LLP",
+  "Private Limited",
+  "Public Limited",
+  "One Person Company",
+  "Government Sector",
+  "NGO/Trust",
+  "HUF",
+  "Other"
+];
 
 const AddBusinessPage = () => {
   const navigate = useNavigate();
@@ -102,6 +119,8 @@ const AddBusinessPage = () => {
       state: '',
       pincode: '',
       gst_number: '',
+      company_type: 'Sole Proprietorship',
+      business_category: 'Retail',
     },
   });
 
@@ -121,7 +140,7 @@ const AddBusinessPage = () => {
 
   const nextStep = async () => {
     let fields = [];
-    if (step === 1) fields = ['name', 'email', 'phone'];
+    if (step === 1) fields = ['name', 'email', 'phone', 'company_type', 'business_category'];
     if (step === 2) fields = ['address', 'city', 'state', 'pincode'];
     
     const isValid = await form.trigger(fields);
@@ -209,6 +228,49 @@ const AddBusinessPage = () => {
                               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                               <Input className="pl-10" placeholder="+91 98765 43210" {...field} />
                             </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="company_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Type *</FormLabel>
+                          <FormControl>
+                            <select 
+                              className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm"
+                              {...field}
+                            >
+                              {companyTypes.map((type) => (
+                                <option key={type} value={type}>{type}</option>
+                              ))}
+                            </select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="business_category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Category *</FormLabel>
+                          <FormControl>
+                            <select 
+                              className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm"
+                              {...field}
+                            >
+                              {industries.map((industry) => (
+                                <option key={industry} value={industry}>{industry}</option>
+                              ))}
+                            </select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

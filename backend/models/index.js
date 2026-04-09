@@ -30,6 +30,25 @@ const PlanFeature = sequelize.define('PlanFeature', {
   ]
 });
 
+// Plan Pricing for different durations with optional discounts
+const PlanPricing = sequelize.define('PlanPricing', {
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  plan_id: { type: DataTypes.UUID, allowNull: false },
+  duration_months: { type: DataTypes.INTEGER, allowNull: false }, // 1, 3, 6, 12, 24, 36
+  duration_label: { type: DataTypes.STRING, allowNull: false }, // '1 Month', '3 Months', etc.
+  price: { type: DataTypes.DECIMAL(10,2), allowNull: false }, // Final price after discount
+  original_price: { type: DataTypes.DECIMAL(10,2), allowNull: false }, // Price without discount
+  discount_percent: { type: DataTypes.DECIMAL(5,2), defaultValue: 0 }, // Discount percentage
+  discount_amount: { type: DataTypes.DECIMAL(10,2), defaultValue: 0 }, // Discount amount
+  is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  is_popular: { type: DataTypes.BOOLEAN, defaultValue: false } // Highlight this option
+}, { 
+  tableName: 'plan_pricing',
+  indexes: [
+    { unique: true, fields: ['plan_id', 'duration_months'] }
+  ]
+});
+
 const Company = sequelize.define('Company',{
   id:{ type:DataTypes.UUID, defaultValue:DataTypes.UUIDV4, primaryKey:true },
   name:{ type:DataTypes.STRING, allowNull:false },
@@ -44,6 +63,7 @@ const Company = sequelize.define('Company',{
   signature:{ type:DataTypes.STRING },
   tagline:{ type:DataTypes.STRING },
   business_category:{ type:DataTypes.STRING, defaultValue:'General Store' },
+  company_type:{ type:DataTypes.ENUM('Sole Proprietorship', 'Partnership', 'LLP', 'Private Limited', 'Public Limited', 'One Person Company', 'Government Sector', 'NGO/Trust', 'HUF', 'Other'), defaultValue:'Sole Proprietorship' },
   invoice_prefix:{ type:DataTypes.STRING, defaultValue:'INV' },
   currency:{ type:DataTypes.STRING, defaultValue:'INR' },
   financial_year_start:{ type:DataTypes.INTEGER, defaultValue:4 },
@@ -497,6 +517,9 @@ Subscription.belongsTo(Company,{foreignKey:'company_id'});
 Plan.hasMany(Subscription,{foreignKey:'plan_id'});
 Subscription.belongsTo(Plan,{foreignKey:'plan_id'});
 
+Plan.hasMany(PlanPricing,{foreignKey:'plan_id'});
+PlanPricing.belongsTo(Plan,{foreignKey:'plan_id'});
+
 Coupon.hasMany(Subscription, { foreignKey: 'coupon_id' });
 Subscription.belongsTo(Coupon, { foreignKey: 'coupon_id' });
 
@@ -695,5 +718,6 @@ module.exports = {
   Enquiry,
   Coupon,
   GstCache,
-  TaxSetting
+  TaxSetting,
+  PlanPricing
 };

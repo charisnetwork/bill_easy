@@ -511,7 +511,7 @@ const deleteUser = async (req, res) => {
 
 const addCompany = async (req, res) => {
   try {
-    const { name, gst_number, address, city, state, pincode, phone, email } = req.body;
+    const { name, gst_number, address, city, state, pincode, phone, email, company_type, business_category } = req.body;
     
     // 1. Count existing businesses owned by this user
     const userCompanies = await UserCompany.findAll({ 
@@ -558,7 +558,16 @@ const addCompany = async (req, res) => {
 
     // 4. Create new company
     const company = await Company.create({
-      name, gst_number, address, city, state, pincode, phone, email
+      name, 
+      gst_number, 
+      address, 
+      city, 
+      state, 
+      pincode, 
+      phone, 
+      email,
+      company_type: company_type || 'Sole Proprietorship',
+      business_category: business_category || 'General Store'
     });
 
     // 5. Link user as owner

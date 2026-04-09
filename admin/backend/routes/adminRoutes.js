@@ -83,7 +83,15 @@ router.get('/coupons/:id/analytics', analyticsController.getCouponAnalytics);
 
 // Plan & Feature Management
 router.get('/plans', managementController.getPlans);
+router.get('/plans/with-pricing', managementController.getPlansWithPricing);
 router.patch('/plans/update', managementController.updatePlanFeature);
 router.patch('/plans/:id', managementController.updatePlan);
+
+// Plan Pricing Management
+router.get('/plan-pricing', managementController.getPlanPricing);
+router.get('/plan-pricing/:plan_id', managementController.getPlanPricing);
+router.post('/plan-pricing', managementController.createPlanPricing);
+router.put('/plan-pricing/:id', managementController.updatePlanPricing);
+router.delete('/plan-pricing/:id', managementController.deletePlanPricing);
 
 module.exports = router;

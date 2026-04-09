@@ -18,7 +18,20 @@ const maskEmail = (email) => {
 const register = async (req, res) => {
   try {
     console.log('Registration request body:', { ...req.body, password: '***' });
-    const { companyName, email, password, name, phone, gstNumber, address } = req.body;
+    const { 
+      companyName, 
+      email, 
+      password, 
+      name, 
+      phone, 
+      gstNumber, 
+      address,
+      pincode,
+      city,
+      state,
+      companyType,
+      businessCategory
+    } = req.body;
 
     // Check existing email
     const existingUserByEmail = await User.findOne({ where: { email } });
@@ -42,14 +55,31 @@ const register = async (req, res) => {
       }
     }
 
+    // Validate GST format if provided
+    if (gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(gstNumber)) {
+        return res.status(400).json({
+          error: 'INVALID_GST',
+          message: 'Please enter a valid 15-digit GST number (e.g., 22AAAAA0000A1Z5)'
+        });
+      }
+    }
+
     console.log('Creating company with GST:', gstNumber);
-    // Create company
+    // Create company with all new fields
     const company = await Company.create({
       name: companyName,
       gst_number: gstNumber,
       gst_registered: !!gstNumber,
       address: address,
-      email: email
+      email: email,
+      phone: phone,
+      city: city,
+      state: state,
+      pincode: pincode,
+      business_category: businessCategory || 'General Store',
+      company_type: companyType || 'Sole Proprietorship'
     });
     console.log('Company created:', company.id, 'GST saved:', company.gst_number);
 
@@ -233,7 +263,17 @@ const login = async (req, res) => {
         id: user.Company.id,
         name: user.Company.name,
         logo: user.Company.logo,
-        currency: user.Company.currency
+        currency: user.Company.currency,
+        gst_number: user.Company.gst_number,
+        gst_registered: user.Company.gst_registered,
+        address: user.Company.address,
+        city: user.Company.city,
+        state: user.Company.state,
+        pincode: user.Company.pincode,
+        phone: user.Company.phone,
+        email: user.Company.email,
+        business_category: user.Company.business_category,
+        company_type: user.Company.company_type
       } : null,
       companies,
       subscription: (user.Company && user.Company.Subscription)
@@ -301,6 +341,7 @@ const getProfile = async (req, res) => {
         id: user.Company.id,
         name: user.Company.name,
         gst_number: user.Company.gst_number,
+        gst_registered: user.Company.gst_registered,
         address: user.Company.address,
         city: user.Company.city,
         state: user.Company.state,
@@ -312,6 +353,7 @@ const getProfile = async (req, res) => {
         qr_code: user.Company.qr_code,
         tagline: user.Company.tagline,
         business_category: user.Company.business_category,
+        company_type: user.Company.company_type,
         invoice_prefix: user.Company.invoice_prefix,
         currency: user.Company.currency,
         bank_name: user.Company.bank_name,

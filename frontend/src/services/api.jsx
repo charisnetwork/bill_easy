@@ -180,12 +180,17 @@ export const reportAPI = {
 // Subscription APIs
 export const subscriptionAPI = {
   getPlans: () => api.get('/subscription/plans'),
+  getPlanPricing: (planId) => api.get(`/subscription/pricing/${planId}`),
   getCurrent: () => api.get('/subscription/current'),
   getUsage: () => api.get('/subscription/usage'),
   upgrade: (data) => api.post('/subscription/upgrade', data),
   cancel: () => api.post('/subscription/cancel'),
   processPayment: (data) => api.post('/subscription/payment', data),
-  validateCoupon: (data) => api.post('/subscription/validate-coupon', data)
+  validateCoupon: (data) => api.post('/subscription/validate-coupon', data),
+  // Admin endpoints for plan pricing
+  getAllPlanPricing: () => api.get('/subscription/admin/pricing'),
+  createPlanPricing: (data) => api.post('/subscription/admin/pricing', data),
+  deletePlanPricing: (id) => api.delete(`/subscription/admin/pricing/${id}`)
 };
 
 // E-Way Bill APIs

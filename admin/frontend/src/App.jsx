@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Globe, Tag, Megaphone, DollarSign, 
   TrendingUp, TrendingDown, Shield, LogOut, Search, Filter,
   Users, CreditCard, Calendar, BarChart3, Plus, Trash2, Edit, ChevronRight,
-  Lock, Eye, EyeOff
+  Lock, Eye, EyeOff, Clock, Percent, Check, X
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line 
@@ -199,6 +199,7 @@ const AdminApp = () => {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [showAffiliateModal, setShowAffiliateModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showPlanPricingModal, setShowPlanPricingModal] = useState(false);
   
   const [couponForm, setCouponForm] = useState({
     code: '',
@@ -224,6 +225,30 @@ const AdminApp = () => {
     is_active: true
   });
 
+  const [planPricingForm, setPlanPricingForm] = useState({
+    id: '',
+    plan_id: '',
+    plan_name: '',
+    duration_months: 12,
+    duration_label: '1 Year',
+    price: '',
+    original_price: '',
+    discount_percent: 15,
+    is_active: true,
+    is_popular: true
+  });
+
+  const [planPricingList, setPlanPricingList] = useState([]);
+
+  const DURATION_OPTIONS = [
+    { value: 1, label: '1 Month', defaultDiscount: 0 },
+    { value: 3, label: '3 Months', defaultDiscount: 5 },
+    { value: 6, label: '6 Months', defaultDiscount: 10 },
+    { value: 12, label: '1 Year', defaultDiscount: 15 },
+    { value: 24, label: '2 Years', defaultDiscount: 25 },
+    { value: 36, label: '3 Years', defaultDiscount: 30 }
+  ];
+
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -235,23 +260,34 @@ const AdminApp = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [sRes, subRes, cRes, afRes, pRes] = await Promise.all([
+      const [sRes, subRes, cRes, afRes, pRes, ppRes] = await Promise.all([
         api.get('/dashboard/summary'),
         api.get('/dashboard/subscribers'),
         api.get('/coupons'),
         api.get('/affiliates'),
-        api.get('/plans')
+        api.get('/plans'),
+        api.get('/plan-pricing')
       ]);
       setSummary(sRes.data);
       setSubscribers(subRes.data);
       setCoupons(cRes.data);
       setAffiliates(afRes.data);
       setPlans(pRes.data);
+      setPlanPricingList(ppRes.data);
       fetchRevenue();
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPlanPricing = async () => {
+    try {
+      const res = await api.get('/plan-pricing');
+      setPlanPricingList(res.data);
+    } catch (err) {
+      console.error('Failed to fetch plan pricing:', err);
     }
   };
 
@@ -313,6 +349,92 @@ const AdminApp = () => {
         alert('Failed to delete affiliate');
       }
     }
+  };
+
+  // Plan Pricing Handlers
+  const handleCreatePlanPricing = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        plan_id: planPricingForm.plan_id,
+        duration_months: parseInt(planPricingForm.duration_months),
+        duration_label: planPricingForm.duration_label,
+        price: parseFloat(planPricingForm.price),
+        original_price: parseFloat(planPricingForm.original_price) || parseFloat(planPricingForm.price),
+        discount_percent: parseFloat(planPricingForm.discount_percent) || 0,
+        is_active: planPricingForm.is_active,
+        is_popular: planPricingForm.is_popular
+      };
+
+      if (planPricingForm.id) {
+        await api.put(`/plan-pricing/${planPricingForm.id}`, payload);
+      } else {
+        await api.post('/plan-pricing', payload);
+      }
+
+      setShowPlanPricingModal(false);
+      alert(planPricingForm.id ? 'Plan pricing updated!' : 'Plan pricing created!');
+      fetchPlanPricing();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save plan pricing: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeletePlanPricing = async (id) => {
+    if (window.confirm('Delete this pricing option?')) {
+      try {
+        await api.delete(`/plan-pricing/${id}`);
+        alert('Plan pricing deleted!');
+        fetchPlanPricing();
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete plan pricing');
+      }
+    }
+  };
+
+  const calculateDiscountedPrice = (originalPrice, discountPercent) => {
+    if (!originalPrice || !discountPercent) return originalPrice;
+    const discount = (originalPrice * discountPercent) / 100;
+    return Math.round(originalPrice - discount);
+  };
+
+  const openPlanPricingModal = (plan, existingPricing = null) => {
+    if (existingPricing) {
+      setPlanPricingForm({
+        id: existingPricing.id,
+        plan_id: existingPricing.plan_id,
+        plan_name: plan.plan_name,
+        duration_months: existingPricing.duration_months,
+        duration_label: existingPricing.duration_label,
+        price: existingPricing.price,
+        original_price: existingPricing.original_price,
+        discount_percent: existingPricing.discount_percent,
+        is_active: existingPricing.is_active,
+        is_popular: existingPricing.is_popular
+      });
+    } else {
+      const selectedDuration = DURATION_OPTIONS.find(d => d.value === 12); // Default to 1 year
+      const monthlyPrice = parseFloat(plan.price) || 0;
+      const originalPrice = monthlyPrice * selectedDuration.value;
+      const discountPercent = selectedDuration.defaultDiscount;
+      const discountedPrice = calculateDiscountedPrice(originalPrice, discountPercent);
+
+      setPlanPricingForm({
+        id: '',
+        plan_id: plan.id,
+        plan_name: plan.plan_name,
+        duration_months: selectedDuration.value,
+        duration_label: selectedDuration.label,
+        price: discountedPrice,
+        original_price: originalPrice,
+        discount_percent: discountPercent,
+        is_active: true,
+        is_popular: selectedDuration.value === 12
+      });
+    }
+    setShowPlanPricingModal(true);
   };
 
   const fetchRevenue = async () => {
@@ -381,6 +503,7 @@ const AdminApp = () => {
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'subscribers', label: 'Subscribers', icon: Users },
             { id: 'plans', label: 'Plan Features', icon: Shield },
+            { id: 'pricing', label: 'Plan Pricing', icon: DollarSign },
             { id: 'affiliates', label: 'Affiliates', icon: Globe },
             { id: 'coupons', label: 'Coupons', icon: Tag },
           ].map(item => (
@@ -573,6 +696,186 @@ const AdminApp = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'pricing' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black text-white">Duration-Based Pricing</h3>
+                <p className="text-slate-500 text-sm mt-1">Manage subscription durations and discounts for each plan</p>
+              </div>
+            </div>
+
+            {/* Plan Pricing Cards */}
+            <div className="space-y-6">
+              {plans.filter(p => p.plan_name !== 'Free Account').map(plan => {
+                const planPricing = planPricingList.filter(pp => pp.plan_id === plan.id);
+                return (
+                  <div key={plan.id} className="bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden">
+                    <div className="p-6 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center">
+                          <DollarSign className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-white uppercase tracking-tighter">{plan.plan_name}</h3>
+                          <p className="text-indigo-400 font-bold text-xs mt-1">Base: ₹{plan.price}/month</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => openPlanPricingModal(plan)}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all"
+                      >
+                        <Plus className="w-4 h-4" /> ADD PRICING
+                      </button>
+                    </div>
+                    
+                    <div className="p-6">
+                      {planPricing.length === 0 ? (
+                        <div className="text-center py-8 text-slate-500">
+                          <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                          <p className="text-sm">No custom pricing set. Default discounts will apply.</p>
+                          <p className="text-xs mt-1">1M: 0% | 3M: 5% | 6M: 10% | 1Y: 15% | 2Y: 25% | 3Y: 30%</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                          {DURATION_OPTIONS.map(duration => {
+                            const pricing = planPricing.find(pp => pp.duration_months === duration.value);
+                            const monthlyPrice = parseFloat(plan.price) || 0;
+                            const calculatedOriginal = monthlyPrice * duration.value;
+                            const calculatedDiscounted = calculateDiscountedPrice(calculatedOriginal, duration.defaultDiscount);
+                            
+                            return (
+                              <div 
+                                key={duration.value}
+                                className={`relative p-4 rounded-2xl border transition-all cursor-pointer hover:border-indigo-500 ${
+                                  pricing 
+                                    ? pricing.is_active 
+                                      ? 'bg-slate-800/50 border-slate-700' 
+                                      : 'bg-slate-950/30 border-slate-800 opacity-60'
+                                    : 'bg-slate-950/30 border-slate-800 border-dashed'
+                                }`}
+                                onClick={() => pricing ? openPlanPricingModal(plan, pricing) : openPlanPricingModal(plan)}
+                              >
+                                {pricing?.is_popular && (
+                                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full">
+                                    POPULAR
+                                  </span>
+                                )}
+                                {!pricing?.is_active && pricing && (
+                                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-700 text-slate-400 text-[8px] font-black px-2 py-0.5 rounded-full">
+                                    INACTIVE
+                                  </span>
+                                )}
+                                
+                                <div className="text-center">
+                                  <p className="text-xs font-bold text-slate-400">{duration.label}</p>
+                                  
+                                  {pricing ? (
+                                    <>
+                                      <p className="text-lg font-black text-white mt-1">₹{Math.round(pricing.price)}</p>
+                                      {pricing.discount_percent > 0 && (
+                                        <>
+                                          <p className="text-xs text-slate-500 line-through">₹{Math.round(pricing.original_price)}</p>
+                                          <p className="text-[10px] text-emerald-400 font-bold mt-1">Save {pricing.discount_percent}%</p>
+                                        </>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-lg font-black text-slate-500 mt-1">₹{calculatedDiscounted}</p>
+                                      <p className="text-xs text-slate-600 line-through">₹{calculatedOriginal}</p>
+                                      <p className="text-[10px] text-slate-600 font-bold mt-1">Auto: {duration.defaultDiscount}% off</p>
+                                    </>
+                                  )}
+                                </div>
+                                
+                                {pricing && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeletePlanPricing(pricing.id);
+                                    }}
+                                    className="absolute top-2 right-2 p-1 hover:bg-rose-500/20 rounded text-slate-600 hover:text-rose-500 transition-all"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pricing Summary Table */}
+            {planPricingList.length > 0 && (
+              <div className="bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden">
+                <div className="p-6 border-b border-slate-800">
+                  <h4 className="text-lg font-black text-white">All Pricing Options</h4>
+                </div>
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-950/50 text-slate-500 font-bold uppercase">
+                    <tr>
+                      <th className="px-6 py-4">Plan</th>
+                      <th className="px-6 py-4">Duration</th>
+                      <th className="px-6 py-4">Original Price</th>
+                      <th className="px-6 py-4">Discount</th>
+                      <th className="px-6 py-4">Final Price</th>
+                      <th className="px-6 py-4">Per Month</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {planPricingList.map(pp => {
+                      const plan = plans.find(p => p.id === pp.plan_id);
+                      const perMonth = Math.round(pp.price / pp.duration_months);
+                      return (
+                        <tr key={pp.id} className="hover:bg-slate-800/20">
+                          <td className="px-6 py-4 font-bold text-white">{plan?.plan_name || 'Unknown'}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${pp.is_popular ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-800 text-slate-400'}`}>
+                              {pp.duration_label}
+                              {pp.is_popular && ' ★'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-500 line-through">₹{Math.round(pp.original_price)}</td>
+                          <td className="px-6 py-4 text-emerald-400 font-bold">{pp.discount_percent}%</td>
+                          <td className="px-6 py-4 font-bold text-white">₹{Math.round(pp.price)}</td>
+                          <td className="px-6 py-4 text-indigo-400">₹{perMonth}/mo</td>
+                          <td className="px-6 py-4">
+                            <span className={`text-[10px] font-black uppercase ${pp.is_active ? 'text-emerald-500' : 'text-rose-500'}`}>
+                              {pp.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button 
+                              onClick={() => openPlanPricingModal(plan, pp)}
+                              className="text-indigo-400 hover:text-white font-black uppercase text-[10px] mr-3"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDeletePlanPricing(pp.id)}
+                              className="text-rose-500 hover:text-rose-400 font-black uppercase text-[10px]"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -968,6 +1271,145 @@ const AdminApp = () => {
                    <div className="flex gap-4 pt-4">
                       <button type="button" onClick={() => setShowAffiliateModal(false)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3 rounded-xl text-xs transition-all">ABORT</button>
                       <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-xl text-xs transition-all">ONBOARD</button>
+                   </div>
+                </form>
+             </div>
+          </div>
+        )}
+
+        {/* Plan Pricing Modal */}
+        {showPlanPricingModal && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+             <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-8 animate-in zoom-in-95 duration-200">
+                <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">
+                  {planPricingForm.id ? 'Edit' : 'Add'} Pricing
+                </h3>
+                <p className="text-indigo-400 font-bold text-xs mb-6">{planPricingForm.plan_name}</p>
+                
+                <form onSubmit={handleCreatePlanPricing} className="space-y-4">
+                   <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Duration</label>
+                      <select 
+                        value={planPricingForm.duration_months}
+                        onChange={e => {
+                          const months = parseInt(e.target.value);
+                          const option = DURATION_OPTIONS.find(d => d.value === months);
+                          const monthlyPrice = parseFloat(plans.find(p => p.id === planPricingForm.plan_id)?.price) || 0;
+                          const original = monthlyPrice * months;
+                          const discount = option?.defaultDiscount || 0;
+                          const finalPrice = calculateDiscountedPrice(original, discount);
+                          
+                          setPlanPricingForm({
+                            ...planPricingForm, 
+                            duration_months: months,
+                            duration_label: option?.label || `${months} Months`,
+                            original_price: original,
+                            discount_percent: discount,
+                            price: finalPrice,
+                            is_popular: months === 12
+                          });
+                        }}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-bold focus:border-indigo-500 outline-none transition-all"
+                      >
+                        {DURATION_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Original Price (₹)</label>
+                        <input 
+                          type="number"
+                          value={planPricingForm.original_price}
+                          onChange={e => {
+                            const original = parseFloat(e.target.value) || 0;
+                            const discounted = calculateDiscountedPrice(original, planPricingForm.discount_percent);
+                            setPlanPricingForm({
+                              ...planPricingForm, 
+                              original_price: original,
+                              price: discounted
+                            });
+                          }}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-bold focus:border-indigo-500 outline-none transition-all"
+                        />
+                     </div>
+                     <div>
+                        <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Discount %</label>
+                        <input 
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={planPricingForm.discount_percent}
+                          onChange={e => {
+                            const discount = parseFloat(e.target.value) || 0;
+                            const discounted = calculateDiscountedPrice(planPricingForm.original_price, discount);
+                            setPlanPricingForm({
+                              ...planPricingForm, 
+                              discount_percent: discount,
+                              price: discounted
+                            });
+                          }}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-bold focus:border-indigo-500 outline-none transition-all"
+                        />
+                     </div>
+                   </div>
+
+                   <div className="bg-slate-950 rounded-xl p-4 border border-slate-800">
+                     <div className="flex justify-between items-center">
+                       <span className="text-xs text-slate-500">Final Price</span>
+                       <span className="text-2xl font-black text-emerald-400">₹{Math.round(planPricingForm.price)}</span>
+                     </div>
+                     <div className="flex justify-between items-center mt-1">
+                       <span className="text-xs text-slate-500">Per Month</span>
+                       <span className="text-sm font-bold text-indigo-400">₹{Math.round(planPricingForm.price / planPricingForm.duration_months)}/mo</span>
+                     </div>
+                     {planPricingForm.discount_percent > 0 && (
+                       <div className="flex justify-between items-center mt-1">
+                         <span className="text-xs text-slate-500">You Save</span>
+                         <span className="text-xs font-bold text-emerald-500">
+                           ₹{Math.round(planPricingForm.original_price - planPricingForm.price)} ({planPricingForm.discount_percent}%)
+                         </span>
+                       </div>
+                     )}
+                   </div>
+
+                   <div className="flex items-center gap-4">
+                     <label className="flex items-center gap-2 cursor-pointer">
+                       <input 
+                         type="checkbox"
+                         checked={planPricingForm.is_active}
+                         onChange={e => setPlanPricingForm({...planPricingForm, is_active: e.target.checked})}
+                         className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-indigo-600"
+                       />
+                       <span className="text-xs font-bold text-slate-400 uppercase">Active</span>
+                     </label>
+                     <label className="flex items-center gap-2 cursor-pointer">
+                       <input 
+                         type="checkbox"
+                         checked={planPricingForm.is_popular}
+                         onChange={e => setPlanPricingForm({...planPricingForm, is_popular: e.target.checked})}
+                         className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-orange-500"
+                       />
+                       <span className="text-xs font-bold text-slate-400 uppercase">Mark as Popular</span>
+                     </label>
+                   </div>
+
+                   <div className="flex gap-4 pt-4">
+                      <button 
+                        type="button" 
+                        onClick={() => setShowPlanPricingModal(false)} 
+                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3 rounded-xl text-xs transition-all"
+                      >
+                        CANCEL
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-xl text-xs transition-all shadow-lg shadow-indigo-900/50"
+                      >
+                        {planPricingForm.id ? 'UPDATE' : 'CREATE'}
+                      </button>
                    </div>
                 </form>
              </div>
