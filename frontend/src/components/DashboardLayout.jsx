@@ -386,35 +386,21 @@ export const DashboardLayout = ({ children }) => {
                 <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl shadow-xl border-slate-200">
                   <DropdownMenuItem 
                     onClick={() => navigate('/settings')}
-                    className="rounded-lg py-2.5 cursor-pointer"
+                    className="rounded-lg py-2.5 cursor-pointer items-center"
+                    style={{ paddingLeft: '45px' }}
                   >
-                    <Settings className="w-4 h-4 mr-3 text-slate-500" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">Settings</span>
-                      <span className="text-[10px] text-slate-400">Account & Preferences</span>
-                    </div>
+                    <Settings className="w-4 h-4 mr-3 text-slate-500 absolute left-3" />
+                    <span className="text-sm font-medium">Settings</span>
                   </DropdownMenuItem>
-
-                  {user?.email === 'pachu.mgd@gmail.com' && (
-                    <DropdownMenuItem 
-                      onClick={() => window.open('https://billeasy-admin-frontend.onrender.com', '_blank')}
-                      className="rounded-lg py-2.5 cursor-pointer text-indigo-600 focus:text-indigo-700 focus:bg-indigo-50"
-                    >
-                      <Shield className="w-4 h-4 mr-3" />
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">Platform Admin</span>
-                        <span className="text-[10px] text-indigo-400">Developer Control Center</span>
-                      </div>
-                    </DropdownMenuItem>
-                  )}
 
                   <DropdownMenuSeparator className="my-2" />
 
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-rose-600 rounded-lg py-2.5 cursor-pointer focus:bg-rose-50 focus:text-rose-700"
+                    className="text-rose-600 rounded-lg py-2.5 cursor-pointer focus:bg-rose-50 focus:text-rose-700 items-center"
+                    style={{ paddingLeft: '45px' }}
                   >
-                    <LogOut className="w-4 h-4 mr-3" />
+                    <LogOut className="w-4 h-4 mr-3 absolute left-3" />
                     <span className="text-sm font-medium">Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
