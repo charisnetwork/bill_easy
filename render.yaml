@@ -21,7 +21,7 @@ envVarGroups:
         sync: false
 
 services:
-  # 1. Main Backend
+  # 1. Main Backend (Node.js)
   - type: web
     name: billeasy-backend
     runtime: node
@@ -43,13 +43,13 @@ services:
         value: production
       - fromGroup: BillEasy-Secrets
 
-  # 2. Main Frontend (FIXED TYPE)
-  - type: static_site
+  # 2. Main Frontend (Static Site)
+  - type: web
     name: billeasy-frontend
+    runtime: static
     plan: free
-    region: frankfurt
     buildCommand: npm install --force --legacy-peer-deps && npm run build
-    publishDir: dist
+    staticPublishPath: ./dist
     rootDir: frontend
     envVars:
       - key: VITE_BACKEND_URL
@@ -59,7 +59,7 @@ services:
         source: /*
         destination: /index.html
 
-  # 3. Admin Backend
+  # 3. Admin Backend (Node.js)
   - type: web
     name: billeasy-admin-backend
     runtime: node
@@ -79,23 +79,19 @@ services:
         fromDatabase:
           name: billeasy-db
           property: connectionString
-      - key: ADMIN_SECRET
-        value: developer_secret_key_2026
       - fromGroup: BillEasy-Secrets
 
-  # 4. Admin Frontend (FIXED TYPE)
-  - type: static_site
+  # 4. Admin Frontend (Static Site)
+  - type: web
     name: billeasy-admin-frontend
+    runtime: static
     plan: free
-    region: frankfurt
     buildCommand: npm install --force --legacy-peer-deps && npm run build
-    publishDir: dist
+    staticPublishPath: ./dist
     rootDir: admin/frontend
     envVars:
       - key: VITE_ADMIN_BACKEND_URL
         value: https://billeasy-admin-backend.onrender.com
-      - key: VITE_ADMIN_SECRET
-        value: developer_secret_key_2026
     routes:
       - type: rewrite
         source: /*
