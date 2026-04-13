@@ -169,7 +169,7 @@ const ContactPage = () => {
                     >
                       <option value="">Select your industry</option>
                       {industries.map(ind => (
-                        <option key={ind} value={ind}>{ind}</option>
+                        <option key={ind.value} value={ind.value}>{ind.label}</option>
                       ))}
                     </select>
                   </div>

@@ -268,7 +268,7 @@ const AddBusinessPage = () => {
                               {...field}
                             >
                               {industries.map((industry) => (
-                                <option key={industry} value={industry}>{industry}</option>
+                                <option key={industry.value} value={industry.value}>{industry.label}</option>
                               ))}
                             </select>
                           </FormControl>
