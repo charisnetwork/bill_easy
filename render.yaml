@@ -15,9 +15,14 @@ envVarGroups:
         sync: false
       - key: VITE_RAZORPAY_KEY_ID
         sync: false
+      # Added for Branding & Google Storage
+      - key: COMPANY_MOBILE
+        sync: false
+      - key: COMPANY_LOGO_URL
+        sync: false
 
 services:
-  # 1. Main Backend Web Service
+  # 1. Main Backend (Node.js)
   - type: web
     name: billeasy-backend
     runtime: node
@@ -39,16 +44,11 @@ services:
         value: production
       - key: SMTP_PORT
         value: 587
-      - key: COMPANY_MOBILE
-        sync: false
-      - key: COMPANY_LOGO_URL
-        sync: false
       - fromGroup: BillEasy-Secrets
 
-  # 2. Main Frontend Static Site
-  - type: web
+  # 2. Main Frontend (Corrected to type: static)
+  - type: static
     name: billeasy-frontend
-    runtime: static
     plan: free
     buildCommand: npm install --force --legacy-peer-deps && npm run build
     publishDir: dist
@@ -56,16 +56,12 @@ services:
     envVars:
       - key: VITE_BACKEND_URL
         value: https://billeasy-backend.onrender.com
-      - key: REACT_APP_BACKEND_URL
-        value: https://billeasy-backend.onrender.com
-      - fromGroup: BillEasy-Secrets
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
-        status: 404
 
-  # 3. Admin Backend Web Service
+  # 3. Admin Backend (Node.js)
   - type: web
     name: billeasy-admin-backend
     runtime: node
@@ -91,7 +87,7 @@ services:
         value: production
       - fromGroup: BillEasy-Secrets
 
-  # 4. Admin Frontend Static Site
+  # 4. Admin Frontend (Corrected to type: static)
   - type: static
     name: billeasy-admin-frontend
     plan: free
@@ -107,10 +103,8 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
-        status: 404
 
 databases:
-  # Unified Render PostgreSQL Database
   - name: billeasy-db
     plan: free
     region: frankfurt
