@@ -1,6 +1,8 @@
 const { Purchase, PurchaseItem, Supplier, Product, Payment, StockMovement, StockLevel, Godown, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const fs = require('fs');
+// Suppress pdf-parse warnings in Node.js 20+
+process.env.PDFJS_DISABLE_WORKER = 'true';
 const pdf = require('pdf-parse');
 
 const generateBillNumber = async (companyId) => {
