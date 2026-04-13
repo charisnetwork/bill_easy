@@ -5,13 +5,30 @@ const { Op } = require("sequelize");
 exports.getPincode = async (req, res) => {
   try {
     const { pincode } = req.params;
+    
+    // Validate pincode
+    if (!pincode || !/^\d{6}$/.test(pincode)) {
+      return res.status(400).json({ error: "Invalid pincode format" });
+    }
+    
     const response = await axios.get(
-      `https://api.postalpincode.in/pincode/${pincode}`
+      `https://api.postalpincode.in/pincode/${pincode}`,
+      { timeout: 5000 }
     );
+    
+    // Check if API returned valid data
+    if (response.data && Array.isArray(response.data) && response.data[0]?.Status === 'Success') {
+      return res.json(response.data);
+    } else if (response.data?.[0]?.Status === 'Error') {
+      return res.status(404).json({ error: "Pincode not found" });
+    }
+    
     res.json(response.data);
   } catch (error) {
+    console.error("Pincode Lookup Error:", error.message);
     res.status(500).json({
-      error: "Pincode lookup failed"
+      error: "Pincode lookup failed",
+      message: error.message
     });
   }
 };

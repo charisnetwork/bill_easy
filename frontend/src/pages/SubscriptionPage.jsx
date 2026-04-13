@@ -7,6 +7,21 @@ import { CheckCircle2, XCircle, Crown, Zap, Rocket, MonitorSmartphone, Users2, B
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+// Load Razorpay script dynamically
+const loadRazorpayScript = () => {
+  return new Promise((resolve, reject) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => reject(new Error('Failed to load Razorpay'));
+    document.body.appendChild(script);
+  });
+};
+
 const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
 
 // Duration options with labels
@@ -175,6 +190,10 @@ export const SubscriptionPage = () => {
 
     try {
       setUpgrading(true);
+      
+      // Ensure Razorpay script is loaded
+      await loadRazorpayScript();
+      
       const res = await subscriptionAPI.processPayment({ 
         plan_id: plan.id,
         duration_months: durationMonths,
