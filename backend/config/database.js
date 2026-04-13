@@ -1,5 +1,8 @@
 const { Sequelize } = require('sequelize');
 
+// Check if we're in Railway environment
+const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production' || process.env.RAILWAY_PRIVATE_DOMAIN;
+
 const sequelize = process.env.DATABASE_URL
   ? new Sequelize(process.env.DATABASE_URL, {
       dialect: 'postgres',
@@ -10,12 +13,17 @@ const sequelize = process.env.DATABASE_URL
         timestamps: true
       },
       quoteIdentifiers: true,
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
-      }
+      dialectOptions: isRailway
+        ? {
+            // For Railway private networking, SSL may not be required
+            ssl: false
+          }
+        : {
+            ssl: {
+              require: true,
+              rejectUnauthorized: false
+            }
+          }
     })
   : new Sequelize(
       process.env.DB_NAME || 'mybillbook',
