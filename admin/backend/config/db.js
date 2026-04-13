@@ -1,6 +1,8 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production' || process.env.RAILWAY_PRIVATE_DOMAIN;
+
 const sequelizeOptions = {
   dialect: 'postgres',
   logging: false,
@@ -11,7 +13,7 @@ const sequelizeOptions = {
   }
 };
 
-// Enable SSL only for Render hosting
+// Enable SSL only for Render hosting (not Railway)
 if (process.env.DATABASE_URL?.includes('render.com')) {
   sequelizeOptions.dialectOptions = {
     ssl: {
@@ -21,15 +23,22 @@ if (process.env.DATABASE_URL?.includes('render.com')) {
   };
 }
 
-// Use environment variables with fallbacks for local development
-const saasDB = new Sequelize(
-  process.env.DATABASE_URL || 'postgres://pachu:nishu@localhost:5432/mybillbook', 
-  sequelizeOptions
-);
+// Disable SSL for Railway internal connections
+if (isRailway) {
+  sequelizeOptions.dialectOptions = {
+    ssl: false
+  };
+}
 
-const adminDB = new Sequelize(
-  process.env.DATABASE_URL_ADMIN || 'postgres://pachu:nishu@localhost:5432/mybillbook_admin', 
-  sequelizeOptions
-);
+// Use environment variables with fallbacks for local development
+// Both DBs use same connection (different schemas/tables)
+const dbUrl = process.env.DATABASE_URL || 'postgres://pachu:nishu@localhost:5432/mybillbook';
+
+const saasDB = new Sequelize(dbUrl, sequelizeOptions);
+
+// Use DATABASE_URL_ADMIN if provided, otherwise use same as saasDB
+const adminDB = process.env.DATABASE_URL_ADMIN 
+  ? new Sequelize(process.env.DATABASE_URL_ADMIN, sequelizeOptions)
+  : saasDB;
 
 module.exports = { saasDB, adminDB };
