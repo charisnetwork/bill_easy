@@ -5,7 +5,7 @@ import axios from 'axios';
  * We hardcode the production URL as the primary value for charisbilleasy.store 
  * to ensure absolute routing and prevent relative path errors.
  */
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001';
+const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'https://bill-easy-production.up.railway.app';
 const API_URL = `${BASE_URL}/api`;
 
 const getToken = () => localStorage.getItem('token');
