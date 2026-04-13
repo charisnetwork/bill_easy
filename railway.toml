@@ -1,10 +1,3 @@
-[build]
-builder = "nixpacks"
-
-[build.nixpacks]
-# Build frontend first, then backend
-buildCommand = "cd frontend && npm install --force --legacy-peer-deps && npm run build && cd ../backend && npm install --force --legacy-peer-deps"
-
 [deploy]
 startCommand = "cd backend && NODE_NO_WARNINGS=1 node server.js"
 restartPolicyType = "on_failure"
