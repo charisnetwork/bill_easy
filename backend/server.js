@@ -8,7 +8,8 @@ const path = require('path');
 const fs = require('fs');
 const { rateLimit } = require('express-rate-limit');
 
-const { sequelize, Plan, Company, Subscription, Godown, User, UserCompany } = require('./models');
+// Define PORT at the top
+const PORT = process.env.PORT || 8080;
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -312,17 +313,14 @@ const seedPlans = async () => {
    SERVER START
 ========================================= */
 
-const PORT = process.env.PORT || 8080;
-
 // Start listening immediately to pass health checks
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server listening on 0.0.0.0:${PORT}`);
-  console.log(`📡 Health check available at / and /api/health`);
+  console.log(`📡 Health check available at /`);
   
   // Trigger background initialization
   startServer().catch(err => {
     console.error('❌ Background initialization failed:', err);
-    // We don't exit here to keep the process alive for logs/debugging
   });
 });
 
@@ -337,6 +335,8 @@ process.on('unhandledRejection', (reason, promise) => {
 async function startServer() {
   console.log('🔄 Starting background database initialization...');
   try {
+    const { sequelize, Plan, Company, Subscription, Godown, User, UserCompany } = require('./models');
+    
     await sequelize.authenticate();
     console.log('✅ Database connection established');
 
@@ -419,7 +419,5 @@ async function startServer() {
     console.log('✨ Backend initialization complete and ready');
   } catch (error) {
     console.error('❌ Database connection/sync failed:', error);
-    // We don't process.exit(1) here so the health check stays green
-    // but actual API requests will fail with 500, showing the error in logs.
   }
 }
