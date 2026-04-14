@@ -1,7 +1,7 @@
 const { Purchase, PurchaseItem, Supplier, Product, Payment, StockMovement, StockLevel, Godown, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const fs = require('fs');
-const PDFParser = require('pdf2json');
+const pdf = require('pdf-parse');
 
 const generateBillNumber = async (companyId) => {
   const currentYear = new Date().getFullYear();
@@ -520,29 +520,17 @@ const parsePurchasePDF = async (req, res) => {
 
     const dataBuffer = fs.readFileSync(req.file.path);
     
-    // Parse PDF using pdf2json
-    const pdfParser = new PDFParser();
-    const pdfData = await new Promise((resolve, reject) => {
-      pdfParser.on('pdfParser_dataReady', resolve);
-      pdfParser.on('pdfParser_dataError', reject);
-      pdfParser.parseBuffer(dataBuffer);
-    });
+    // Correct API for pdf-parse v2
+    const parser = new pdf.PDFParse({ data: dataBuffer });
+    const data = await parser.getText();
+    await parser.destroy(); // Always call destroy() to free memory
     
-    // Extract text from PDF data
-    let text = '';
-    if (pdfData && pdfData.Pages) {
-      pdfData.Pages.forEach(page => {
-        page.Texts.forEach(textItem => {
-          text += decodeURIComponent(textItem.R[0].T) + ' ';
-        });
-        text += '\n';
-      });
-    }
-    
-    if (!text.trim()) {
+    if (!data || !data.text) {
       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       return res.status(422).json({ error: 'Failed to extract text from PDF.' });
     }
+
+    const text = data.text;
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     
     const products = await Product.findAll({ where: { company_id: req.companyId } });

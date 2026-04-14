@@ -16,7 +16,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'charis_bill_easy_secret_key_2026');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findByPk(decoded.userId, {
       include: [{ model: Company, include: [{ model: Subscription, include: [Plan] }] }]
     });

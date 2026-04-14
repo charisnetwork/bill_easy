@@ -16,7 +16,7 @@ router.patch('/settings', companyController.updateSettings);
 router.post('/add-business', companyController.addCompany);
 router.post('/customize-invoice', companyController.updateInvoiceCustomization);
 
-// Assets - uploads go directly to GCS (memory storage, no local 'uploads/' folder)
+// Assets
 router.post('/upload-logo', uploadLogo.single('logo'), companyController.uploadLogo);
 router.post('/upload-signature', uploadSignature.single('signature'), companyController.uploadSignature);
 router.post('/upload-qr', uploadQRCode.single('qr_code'), companyController.uploadQRCode);

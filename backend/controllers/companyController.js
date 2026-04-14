@@ -1,6 +1,5 @@
 const { Company, User, Subscription, Plan, UserCompany, Godown } = require("../models");
 const bcrypt = require("bcryptjs");
-const { uploadImage, deleteImage } = require("../utils/storage");
 
 
 /* =========================================================
@@ -157,50 +156,33 @@ const updateSettings = async (req, res) => {
 ========================================================= */
 
 const uploadLogo = async (req, res) => {
+
   try {
+
     const companyId = req.companyId;
 
-    // Validate file was uploaded
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+    const logoPath = `/company/logos/${req.file.filename}`;
 
-    // Upload buffer directly to Google Cloud Storage
-    const uploadedUrl = await uploadImage(
-      req.file.buffer,
-      req.file.originalname,
-      'company/logos',
-      req.file.mimetype
-    );
-
-    // Define the public URL (ensures consistent format)
-    const publicUrl = uploadedUrl;
-    console.log('[GCS] Saved public URL to DB: ' + publicUrl);
-
-    // Get current company to delete old logo if exists
-    const company = await Company.findByPk(companyId);
-    if (company && company.logo && company.logo.includes('storage.googleapis.com')) {
-      await deleteImage(company.logo);
-    }
-
-    // Save the public URL to the database
     await Company.update(
-      { logo: publicUrl },
+      { logo: logoPath },
       { where: { id: companyId } }
     );
 
     res.json({
       success: true,
-      logo: publicUrl
+      logo: logoPath
     });
 
   } catch (err) {
-    console.error('[UploadLogo] Error:', err);
+
+    console.error(err);
+
     res.status(500).json({
-      error: "Logo upload failed",
-      message: err.message
+      error: "Logo upload failed"
     });
+
   }
+
 };
 
 
@@ -209,50 +191,33 @@ const uploadLogo = async (req, res) => {
 ========================================================= */
 
 const uploadSignature = async (req, res) => {
+
   try {
+
     const companyId = req.companyId;
 
-    // Validate file was uploaded
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+    const signaturePath = `/company/signatures/${req.file.filename}`;
 
-    // Upload buffer directly to Google Cloud Storage
-    const uploadedUrl = await uploadImage(
-      req.file.buffer,
-      req.file.originalname,
-      'company/signatures',
-      req.file.mimetype
-    );
-
-    // Define the public URL (ensures consistent format)
-    const publicUrl = uploadedUrl;
-    console.log('[GCS] Saved public URL to DB: ' + publicUrl);
-
-    // Get current company to delete old signature if exists
-    const company = await Company.findByPk(companyId);
-    if (company && company.signature && company.signature.includes('storage.googleapis.com')) {
-      await deleteImage(company.signature);
-    }
-
-    // Save the public URL to the database
     await Company.update(
-      { signature: publicUrl },
+      { signature: signaturePath },
       { where: { id: companyId } }
     );
 
     res.json({
       success: true,
-      signature: publicUrl
+      signature: signaturePath
     });
 
   } catch (err) {
-    console.error('[UploadSignature] Error:', err);
+
+    console.error(err);
+
     res.status(500).json({
-      error: "Signature upload failed",
-      message: err.message
+      error: "Signature upload failed"
     });
+
   }
+
 };
 
 
@@ -263,41 +228,19 @@ const uploadSignature = async (req, res) => {
 const uploadQRCode = async (req, res) => {
   try {
     const companyId = req.companyId;
-
-    // Validate file was uploaded
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    // Upload buffer directly to Google Cloud Storage
-    const qrCodeUrl = await uploadImage(
-      req.file.buffer,
-      req.file.originalname,
-      'company/qrcodes',
-      req.file.mimetype
-    );
-
-    // Get current company to delete old QR code if exists
-    const company = await Company.findByPk(companyId);
-    if (company && company.qr_code && company.qr_code.includes('storage.googleapis.com')) {
-      await deleteImage(company.qr_code);
-    }
-
+    const qrCodePath = `/company/qrcodes/${req.file.filename}`;
     await Company.update(
-      { qr_code: qrCodeUrl },
+      { qr_code: qrCodePath },
       { where: { id: companyId } }
     );
-
     res.json({
       success: true,
-      qr_code: qrCodeUrl
+      qr_code: qrCodePath
     });
-
   } catch (err) {
-    console.error('[UploadQRCode] Error:', err);
+    console.error(err);
     res.status(500).json({
-      error: "QR Code upload failed",
-      message: err.message
+      error: "QR Code upload failed"
     });
   }
 };
@@ -511,7 +454,7 @@ const deleteUser = async (req, res) => {
 
 const addCompany = async (req, res) => {
   try {
-    const { name, gst_number, address, city, state, pincode, phone, email, company_type, business_category } = req.body;
+    const { name, gst_number, address, city, state, pincode, phone, email } = req.body;
     
     // 1. Count existing businesses owned by this user
     const userCompanies = await UserCompany.findAll({ 
@@ -558,16 +501,7 @@ const addCompany = async (req, res) => {
 
     // 4. Create new company
     const company = await Company.create({
-      name, 
-      gst_number, 
-      address, 
-      city, 
-      state, 
-      pincode, 
-      phone, 
-      email,
-      company_type: company_type || 'Sole Proprietorship',
-      business_category: business_category || 'General Store'
+      name, gst_number, address, city, state, pincode, phone, email
     });
 
     // 5. Link user as owner

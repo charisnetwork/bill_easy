@@ -8,11 +8,9 @@
     "dev": "node server.js"
   },
   "dependencies": {
-    "@google-cloud/storage": "^7.19.0",
     "@google/generative-ai": "^0.24.1",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
-    "cloudinary": "^1.41.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
@@ -22,15 +20,12 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
-    "multer-storage-cloudinary": "^4.0.0",
-    "nodemailer": "^8.0.4",
-    "pdf2json": "^3.1.4",
+    "pdf-parse": "^2.4.5",
     "pdfkit": "^0.16.0",
     "pg": "^8.20.0",
     "pg-hstore": "^2.3.4",
     "razorpay": "^2.9.6",
     "sequelize": "^6.37.8",
-    "sib-api-v3-sdk": "^8.5.0",
     "string-similarity": "^4.0.4",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5"

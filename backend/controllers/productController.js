@@ -315,9 +315,30 @@ const adjustStock = async (req, res) => {
 
     await product.update({ stock_quantity: newStock });
 
+    // Also update default godown stock if it exists
+    const defaultGodown = await Godown.findOne({
+      where: { company_id: req.companyId, is_default: true }
+    });
+
+    if (defaultGodown) {
+      const [stockLevel] = await StockLevel.findOrCreate({
+        where: { product_id: product.id, godown_id: defaultGodown.id },
+        defaults: { company_id: req.companyId, quantity: 0 }
+      });
+
+      if (type === 'in') {
+        await stockLevel.increment('quantity', { by: parseFloat(quantity) });
+      } else if (type === 'out') {
+        await stockLevel.decrement('quantity', { by: parseFloat(quantity) });
+      } else {
+        await stockLevel.update({ quantity: parseFloat(quantity) });
+      }
+    }
+
     await StockMovement.create({
       company_id: req.companyId,
       product_id: product.id,
+      godown_id: defaultGodown ? defaultGodown.id : null,
       type: type === 'in' ? 'in' : type === 'out' ? 'out' : 'adjustment',
       quantity: Math.abs(parseFloat(quantity)),
       previous_stock: previousStock,
