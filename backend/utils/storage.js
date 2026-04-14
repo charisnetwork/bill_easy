@@ -5,101 +5,37 @@
 
 const { Storage } = require('@google-cloud/storage');
 const path = require('path');
-const fs = require('fs');
 
-// Configuration - supports both JSON key file and env vars
-const GCS_KEY_FILE_PATH = process.env.GCS_KEY_FILE || '/etc/secrets/billeasy_bucket';
-const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME;
+// Configuration from environment variables
+const GCS_PROJECT_ID = process.env.GCS_PROJECT_ID;
+const GCS_CLIENT_EMAIL = process.env.GCS_CLIENT_EMAIL;
+const GCS_PRIVATE_KEY = process.env.GCS_PRIVATE_KEY?.replace(/\\n/g, '\n');
+const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'bill-easy-assets';
 
-let gcsCredentials = null;
-let gcsProjectId = null;
-let gcsBucketName = null;
-
-// Try to load credentials from JSON key file
-const loadGCSCredentials = () => {
-  try {
-    // Check if the secret file exists (Render mounts secrets to /etc/secrets/)
-    const possiblePaths = [
-      GCS_KEY_FILE_PATH,
-      '/etc/secrets/billeasy_bucket',
-      './billeasy_bucket',
-      path.join(__dirname, '../../billeasy_bucket')
-    ];
-    
-    for (const keyPath of possiblePaths) {
-      if (fs.existsSync(keyPath)) {
-        console.log(`[GCS] Found key file at: ${keyPath}`);
-        const keyFileContent = fs.readFileSync(keyPath, 'utf8');
-        gcsCredentials = JSON.parse(keyFileContent);
-        
-        // Extract fields from the key file
-        gcsProjectId = gcsCredentials.project_id;
-        
-        // Validate required fields
-        if (!gcsProjectId || !gcsCredentials.client_email || !gcsCredentials.private_key) {
-          console.error('[GCS] Missing required fields in credentials file');
-          console.error(`  - project_id: ${gcsProjectId ? '✓' : '✗'}`);
-          console.error(`  - client_email: ${gcsCredentials.client_email ? '✓' : '✗'}`);
-          console.error(`  - private_key: ${gcsCredentials.private_key ? '✓' : '✗'}`);
-          continue; // Try next path
-        }
-        
-        // Bucket name: env var > explicit default
-        gcsBucketName = GCS_BUCKET_NAME || 'bill-easy-assets';
-        
-        console.log(`[GCS] Loaded credentials for project: ${gcsProjectId}, service account: ${gcsCredentials.client_email}`);
-        return true;
-      }
-    }
-    
-    // Fallback to individual env vars if no file found
-    gcsProjectId = process.env.GCS_PROJECT_ID;
-    gcsBucketName = GCS_BUCKET_NAME || 'bill-easy-assets';
-    
-    if (gcsProjectId && gcsBucketName) {
-      console.log('[GCS] Using environment variables for configuration');
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error('[GCS] Error loading credentials:', error.message);
-    return false;
-  }
-};
-
-// Check if GCS is configured
-const isGCSConfigured = loadGCSCredentials();
+// Check if GCS is configured with all required credentials
+const isGCSConfigured = !!(GCS_PROJECT_ID && GCS_CLIENT_EMAIL && GCS_PRIVATE_KEY);
 
 let storage;
 let bucket;
 
 if (isGCSConfigured) {
   try {
-    if (gcsCredentials) {
-      // Use credentials from JSON file
-      storage = new Storage({
-        projectId: gcsProjectId,
-        credentials: {
-          client_email: gcsCredentials.client_email,
-          private_key: gcsCredentials.private_key,
-        },
-      });
-    } else {
-      // Use key file path from env
-      storage = new Storage({
-        projectId: gcsProjectId,
-        keyFilename: GCS_KEY_FILE_PATH,
-      });
-    }
-    
-    bucket = storage.bucket(gcsBucketName);
-    console.log(`[GCS] Connected to bucket: ${gcsBucketName}`);
+    storage = new Storage({
+      projectId: GCS_PROJECT_ID,
+      credentials: {
+        client_email: GCS_CLIENT_EMAIL,
+        private_key: GCS_PRIVATE_KEY,
+      },
+    });
+
+    bucket = storage.bucket(GCS_BUCKET_NAME);
+    console.log(`[GCS] Connected to bucket: ${GCS_BUCKET_NAME}`);
+    console.log(`[GCS] Using service account: ${GCS_CLIENT_EMAIL}`);
   } catch (error) {
     console.error('[GCS] Failed to initialize:', error.message);
   }
 } else {
-  console.log('[GCS] Not configured. Set GCS credentials file or env vars.');
+  console.log('[GCS] Not configured. Set GCS_PROJECT_ID, GCS_CLIENT_EMAIL, and GCS_PRIVATE_KEY env vars.');
 }
 
 /**
@@ -112,7 +48,7 @@ if (isGCSConfigured) {
  */
 const uploadImage = async (buffer, filename, folder = 'uploads', mimetype = 'image/jpeg') => {
   if (!bucket) {
-    throw new Error('GCS not configured. Check credentials file or environment variables.');
+    throw new Error('GCS not configured. Check environment variables.');
   }
 
   try {
@@ -139,10 +75,9 @@ const uploadImage = async (buffer, filename, folder = 'uploads', mimetype = 'ima
     await file.makePublic();
 
     // Return the public URL
-    const publicUrl = `https://storage.googleapis.com/${gcsBucketName}/${gcsFileName}`;
+    const publicUrl = `https://storage.googleapis.com/${GCS_BUCKET_NAME}/${gcsFileName}`;
     
     console.log(`[GCS] Uploaded: ${gcsFileName} -> ${publicUrl}`);
-    console.log(`[GCS] Saved public URL to DB: ${publicUrl}`);
     
     return publicUrl;
   } catch (error) {
@@ -160,7 +95,7 @@ const deleteImage = async (fileUrl) => {
 
   try {
     // Extract file path from URL
-    const urlPattern = new RegExp(`https://storage.googleapis.com/${gcsBucketName}/(.+)`);
+    const urlPattern = new RegExp(`https://storage.googleapis.com/${GCS_BUCKET_NAME}/(.+)`);
     const match = fileUrl.match(urlPattern);
     
     if (match && match[1]) {

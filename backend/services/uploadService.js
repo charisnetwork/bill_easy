@@ -16,23 +16,8 @@ const fs = require('fs');
 
 // Helper to check if GCS is configured
 const checkGCSConfig = () => {
-  const possiblePaths = [
-    '/etc/secrets/billeasy_bucket',
-    './billeasy_bucket',
-    path.join(__dirname, '../billeasy_bucket'),
-    path.join(__dirname, '../../billeasy_bucket'),
-    process.env.GCS_KEY_FILE
-  ].filter(Boolean);
-  
-  for (const keyPath of possiblePaths) {
-    if (fs.existsSync(keyPath)) {
-      console.log(`[UploadService] Found GCS key file at: ${keyPath}`);
-      return true;
-    }
-  }
-  
-  // Check env vars as fallback
-  if (process.env.GCS_PROJECT_ID && process.env.GCS_BUCKET_NAME) {
+  // Check for environment variables (Railway way)
+  if (process.env.GCS_PROJECT_ID && process.env.GCS_CLIENT_EMAIL && process.env.GCS_PRIVATE_KEY) {
     console.log('[UploadService] Using GCS env vars');
     return true;
   }
