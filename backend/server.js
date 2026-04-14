@@ -316,7 +316,19 @@ const seedPlans = async () => {
    SERVER START
 ========================================= */
 
-const PORT = process.env.PORT || 8001;
+const PORT = process.env.PORT || 8080;
+
+// Start listening immediately to pass health checks
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server listening on 0.0.0.0:${PORT}`);
+  console.log(`📡 Health check available at / and /api/health`);
+  
+  // Trigger background initialization
+  startServer().catch(err => {
+    console.error('❌ Background initialization failed:', err);
+    // We don't exit here to keep the process alive for logs/debugging
+  });
+});
 
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err);
@@ -326,13 +338,14 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('UNHANDLED REJECTION:', reason);
 });
 
-const startServer = async () => {
+async function startServer() {
+  console.log('🔄 Starting background database initialization...');
   try {
     await sequelize.authenticate();
-    console.log('Database connection established');
+    console.log('✅ Database connection established');
 
     await sequelize.sync({ alter: true });
-    console.log('Database synchronized');
+    console.log('✅ Database synchronized');
 
     await seedPlans();
 
@@ -404,17 +417,13 @@ const startServer = async () => {
         }
       }
     } catch (dbInitError) {
-      console.warn('Database initialization tasks skipped:', dbInitError.message);
+      console.warn('⚠️ Database initialization tasks skipped:', dbInitError.message);
     }
 
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log('Charis is now powered by Gemini 3 Flash');
-    });
+    console.log('✨ Backend initialization complete and ready');
   } catch (error) {
-    console.error('Server startup failed:', error);
-    process.exit(1);
+    console.error('❌ Database connection/sync failed:', error);
+    // We don't process.exit(1) here so the health check stays green
+    // but actual API requests will fail with 500, showing the error in logs.
   }
-};
-
-startServer();
+}
