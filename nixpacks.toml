@@ -1,11 +1,12 @@
-[phases.build]
-cmds = [
-    "cd frontend && npm install --force --legacy-peer-deps && npm run build",
-    "cd backend && npm install --force --legacy-peer-deps"
-]
-
 [phases.setup]
 nixPkgs = ["nodejs_20"]
 
+[phases.build]
+cmds = [
+    "cd frontend && npm install --force --legacy-peer-deps && npm run build",
+    "cd backend && npm install --force --legacy-peer-deps",
+    "cd admin/backend && npm install --force --legacy-peer-deps"
+]
+
 [start]
-cmd = "npm start"
+cmd = "node railway-monorepo.js"

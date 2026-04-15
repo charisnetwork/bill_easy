@@ -43,14 +43,49 @@ app.use(
   })
 );
 
+// CORS Configuration - supports multiple origins for custom domains
+const getCorsOrigins = () => {
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:8000',
+    'http://localhost:8001'
+  ];
+  
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL.split(',').map(url => url.trim());
+  }
+  
+  // If RAILWAY_ENVIRONMENT is set, allow Railway domain
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN;
+    if (railwayDomain) {
+      return [...defaultOrigins, `https://${railwayDomain}`];
+    }
+  }
+  
+  return defaultOrigins;
+};
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : '*',
+    origin: (origin, callback) => {
+      const allowedOrigins = getCorsOrigins();
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id'],
     credentials: true
   })
 );
+
+// Handle preflight requests
+app.options('*', cors());
 
 /* =========================================
    REQUEST LOGGER

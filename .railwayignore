@@ -9,10 +9,9 @@ yarn-error.log
 *.sql
 *.log
 
-# Frontend
-frontend/
-admin/frontend/
-
 # System
 .git/
 .gemini/
+
+# Note: frontend/ and admin/frontend/ are NOT ignored
+# because we need them for the monorepo build process

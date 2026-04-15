@@ -12,17 +12,38 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3025;
 
-// Robust CORS Configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : [
-    'https://bill-easy-production.up.railway.app',
-    'https://admin.charisbilleasy.store',
-    'http://localhost:3021'
+// Robust CORS Configuration for Admin Backend
+const getAllowedOrigins = () => {
+  if (process.env.ALLOWED_ORIGINS) {
+    return process.env.ALLOWED_ORIGINS.split(',').map(url => url.trim());
+  }
+  
+  const origins = [
+    'http://localhost:3000',
+    'http://localhost:3021',
+    'http://localhost:5173',
+    'http://localhost:8000'
   ];
+  
+  // Add Railway domain if available
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    origins.push(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
+  }
+  
+  return origins;
+};
+
+const allowedOrigins = getAllowedOrigins();
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
   credentials: true,
@@ -35,9 +56,13 @@ app.options('*', cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Health Check
+// Health Check - accessible at /admin/api/health through gateway
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    service: 'admin-backend',
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Routes
