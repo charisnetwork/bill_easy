@@ -80,12 +80,11 @@ app.use(
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id'],
-    credentials: true
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   })
 );
-
-// Handle preflight requests for all routes
-app.options('/*', cors());
 
 /* =========================================
    REQUEST LOGGER

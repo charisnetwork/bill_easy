@@ -47,11 +47,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
   credentials: true,
-  optionsSuccessStatus: 200
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
-
-// Explicit Pre-flight handler
-app.options('/*', cors());
 
 app.use(express.json());
 app.use(morgan('dev'));
