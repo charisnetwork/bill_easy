@@ -59,6 +59,7 @@
     "zod": "^3.24.4"
   },
   "scripts": {
+    "dev": "vite",
     "start": "serve -s dist -l $PORT",
     "build": "vite build",
     "preview": "vite preview"

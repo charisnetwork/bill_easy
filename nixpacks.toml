@@ -8,4 +8,4 @@ cmds = [
 nixPkgs = ["nodejs_20"]
 
 [start]
-cmd = "cd backend && NODE_NO_WARNINGS=1 node server.js"
+cmd = "npm start"

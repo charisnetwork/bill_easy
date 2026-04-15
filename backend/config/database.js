@@ -36,7 +36,7 @@ const sequelize = isValidUrl
       process.env.DB_USER || 'postgres',
       process.env.DB_PASS || 'nishu',
       {
-        host: process.env.DB_HOST || 'localhost',
+        host: process.env.DB_HOST,
         port: process.env.DB_PORT || 5432,
         dialect: 'postgres',
         logging: console.log,

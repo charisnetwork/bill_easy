@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node railway-monorepo.js",
-    "install-all": "npm install --force --legacy-peer-deps --prefix backend && npm install --force --legacy-peer-deps --prefix admin/backend",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "install-all": "npm install --force --legacy-peer-deps --prefix backend && npm install --force --legacy-peer-deps --prefix frontend && npm install --force --legacy-peer-deps --prefix admin/backend",
     "postinstall": "npm run install-all"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "express": "^4.21.0",
-    "http-proxy-middleware": "^3.0.0",
-    "@google/generative-ai": "^0.24.1"
+    "http-proxy-middleware": "^3.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
