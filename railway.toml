@@ -6,7 +6,7 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "node railway-monorepo.js"
-healthcheckPath = "/api/health"
+healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
