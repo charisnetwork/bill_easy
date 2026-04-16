@@ -85,7 +85,7 @@ export const RegisterPage = () => {
     setErrors({ ...errors, gstNumber: null });
     
     try {
-      const { data } = await api.get(`/utilities/gst/${gstin}`);
+      const { data } = await api.get(`/utils/gst/${gstin}`);
       
       if (data) {
         toast.success("GST details validated successfully");
@@ -137,7 +137,7 @@ export const RegisterPage = () => {
     setErrors({ ...errors, pincode: null });
     
     try {
-      const { data } = await api.get(`/utilities/pincode/${pincode}`);
+      const { data } = await api.get(`/utils/pincode/${pincode}`);
       
       if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
         const postOffice = data[0].PostOffice[0];

@@ -218,8 +218,8 @@ export const paymentAPI = {
 
 // Utility APIs
 export const utilityAPI = {
-  getGST: (gstin) => api.get(`/utilities/gst/${gstin}`),
-  getPincode: (pincode) => api.get(`/utilities/pincode/${pincode}`)
+  getGST: (gstin) => api.get(`/utils/gst/${gstin}`),
+  getPincode: (pincode) => api.get(`/utils/pincode/${pincode}`)
 };
 
 export default api;
