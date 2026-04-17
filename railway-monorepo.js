@@ -46,13 +46,14 @@ if (fs.existsSync(path.join(__dirname, 'frontend'))) {
 // 2. Proxy API routes (Use specific matching)
 app.use('/admin/api', createProxyMiddleware({ 
   target: 'http://localhost:3025', 
-  pathRewrite: { '^/admin/api': '/api' },
+  pathRewrite: { '^/': '/api/' },
   changeOrigin: true,
   logLevel: 'debug'
 }));
 
 app.use('/api', createProxyMiddleware({ 
   target: 'http://localhost:8001', 
+  pathRewrite: { '^/': '/api/' },
   changeOrigin: true,
   logLevel: 'debug'
 }));
