@@ -48,14 +48,18 @@ app.use('/admin/api', createProxyMiddleware({
   target: 'http://localhost:3025', 
   pathRewrite: { '^/': '/api/' },
   changeOrigin: true,
-  logLevel: 'debug'
+  logLevel: 'debug',
+  proxyTimeout: 60000,
+  timeout: 60000
 }));
 
 app.use('/api', createProxyMiddleware({ 
   target: 'http://localhost:8001', 
   pathRewrite: { '^/': '/api/' },
   changeOrigin: true,
-  logLevel: 'debug'
+  logLevel: 'debug',
+  proxyTimeout: 60000,
+  timeout: 60000
 }));
 
 // 3. Serve Uploads
