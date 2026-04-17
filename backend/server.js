@@ -31,7 +31,8 @@ const paymentRoutes = require('./routes/payments');
 
 const app = express();
 
-app.set("trust proxy", 1);
+// Trust proxy for express-rate-limit
+app.set('trust proxy', 1);
 
 /* =========================================
    SECURITY
@@ -45,46 +46,12 @@ app.use(
   })
 );
 
-// CORS Configuration - supports multiple origins for custom domains
-const getCorsOrigins = () => {
-  const defaultOrigins = [
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:8000',
-    'http://localhost:8001'
-  ];
-  
-  if (process.env.FRONTEND_URL) {
-    return process.env.FRONTEND_URL.split(',').map(url => url.trim());
-  }
-  
-  // If RAILWAY_ENVIRONMENT is set, allow Railway domain
-  if (process.env.RAILWAY_ENVIRONMENT) {
-    const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN;
-    if (railwayDomain) {
-      return [...defaultOrigins, `https://${railwayDomain}`];
-    }
-  }
-  
-  return defaultOrigins;
-};
-
 app.use(
   cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = getCorsOrigins();
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-        return callback(null, true);
-      }
-      callback(new Error('Not allowed by CORS'));
-    },
+    origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id'],
-    credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204
+    credentials: true
   })
 );
 
@@ -123,6 +90,14 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/', (req, res) => {
+  res.json({
+    message: "Bill Easy Backend is running.",
+    port: process.env.PORT || 8001,
+    status: "isolated"
   });
 });
 
@@ -306,7 +281,9 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Database connection established');
 
-    await sequelize.sync({ alter: true });
+    // Only use alter: true in development; in production, use migrations
+    const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
+    await sequelize.sync(syncOptions);
     console.log('Database synchronized');
 
     await seedPlans();

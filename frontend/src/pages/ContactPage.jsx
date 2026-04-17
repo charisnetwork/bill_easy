@@ -1,4 +1,3 @@
-import { BASE_URL } from '../services/api';
 import React, { useState } from 'react';
 import { Phone, MessageSquare, Mail, MapPin, Send, Globe, Instagram, Facebook, Linkedin, ArrowRight } from 'lucide-react';
 import { industries } from '../lib/industryConfig';
@@ -26,7 +25,7 @@ const ContactPage = () => {
     };
 
     try {
-      const response = await fetch(`${BASE_URL}/api/enquiries`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/enquiries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -169,7 +168,7 @@ const ContactPage = () => {
                     >
                       <option value="">Select your industry</option>
                       {industries.map(ind => (
-                        <option key={ind.value} value={ind.value}>{ind.label}</option>
+                        <option key={ind} value={ind}>{ind}</option>
                       ))}
                     </select>
                   </div>

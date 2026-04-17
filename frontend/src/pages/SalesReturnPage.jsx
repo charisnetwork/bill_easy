@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoiceAPI, creditNoteAPI, companyAPI, BASE_URL } from '../services/api';
+import { invoiceAPI, creditNoteAPI, companyAPI } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -138,7 +138,7 @@ export const SalesReturnPage = () => {
 
   const downloadCN = (id) => {
     const token = localStorage.getItem('token');
-    window.open(`${BASE_URL}/api/credit-notes/${id}/pdf?token=${token}`, "_blank");
+    window.open(`${process.env.REACT_APP_BACKEND_URL}/api/credit-notes/${id}/pdf?token=${token}`, "_blank");
   };
 
   const handleSubmit = async (e) => {

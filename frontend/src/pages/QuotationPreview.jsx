@@ -157,7 +157,7 @@ const QuotationPreview = () => {
                 <div className="flex flex-row items-start justify-between border-b border-slate-100 pb-10">
                   <div className="flex items-start gap-6">
                     {company?.logo ? (
-                      <img src={`${BASE_URL}/uploads${company.logo.startsWith('/') ? '' : '/'}${company.logo}`} alt="Logo" className="h-20 w-auto object-contain" />
+                      <img src={`${process.env.REACT_APP_BACKEND_URL}/uploads${company.logo.startsWith('/') ? '' : '/'}${company.logo}`} alt="Logo" className="h-20 w-auto object-contain" />
                     ) : (
                       <div className="h-20 w-20 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 shadow-inner">
                         <Building2 className="w-10 h-10 text-slate-300" />

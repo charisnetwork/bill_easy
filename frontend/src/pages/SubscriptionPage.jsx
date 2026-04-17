@@ -3,36 +3,10 @@ import { subscriptionAPI } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { CheckCircle2, XCircle, Crown, Zap, Rocket, MonitorSmartphone, Users2, Building2, Loader2, Sparkles } from 'lucide-react';
+import { CheckCircle2, XCircle, Crown, Zap, Rocket, MonitorSmartphone, Users2, Building2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-
-// Load Razorpay script dynamically
-const loadRazorpayScript = () => {
-  return new Promise((resolve, reject) => {
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => reject(new Error('Failed to load Razorpay'));
-    document.body.appendChild(script);
-  });
-};
 
 const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
-
-// Duration options with labels
-const DURATION_OPTIONS = [
-  { months: 1, label: '1 Month', discountLabel: '' },
-  { months: 3, label: '3 Months', discountLabel: 'Save 5%', popular: false },
-  { months: 6, label: '6 Months', discountLabel: 'Save 10%' },
-  { months: 12, label: '1 Year', discountLabel: 'Save 15%', popular: true },
-  { months: 24, label: '2 Years', discountLabel: 'Save 25%' },
-  { months: 36, label: '3 Years', discountLabel: 'Save 30%' }
-];
 
 export const SubscriptionPage = () => {
   const [plans, setPlans] = useState([]);
@@ -43,9 +17,6 @@ export const SubscriptionPage = () => {
   const [couponCode, setCouponCode] = useState('');
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-  
-  // Duration selection state - key is planId, value is months
-  const [selectedDurations, setSelectedDurations] = useState({});
 
   // The master list of all possible features across all plans
   const ALL_FEATURES = [
@@ -56,7 +27,7 @@ export const SubscriptionPage = () => {
     { id: 'eway_bills', label: 'E-way Bills', premiumLimit: '5/month', enterpriseLimit: 'Unlimited' },
     { id: 'staff_attendance_payroll', label: 'Staff Attendance & Payroll' },
     { id: 'multi_godowns', label: 'Multiple Godowns/Warehouses' },
-    { id: 'can_manage_multiple', label: 'Manage Multiple Businesses' },
+    { id: 'manage_businesses', label: 'Manage Multiple Businesses' },
     { id: 'user_activity_tracker', label: 'User Activity Tracker' },
     { id: 'priority_support', label: 'Priority Support' },
   ];
@@ -66,19 +37,6 @@ export const SubscriptionPage = () => {
       const plansRes = await subscriptionAPI.getPlans();
       const filtered = plansRes.data.filter(p => ['Free Account', 'Premium', 'Enterprise'].includes(p.plan_name));
       setPlans(filtered);
-      
-      // Initialize default durations (prefer 1 year if available, else 3 months)
-      const defaultDurations = {};
-      filtered.forEach(plan => {
-        if (plan.pricing_options && plan.pricing_options.length > 0) {
-          const yearlyOption = plan.pricing_options.find(p => p.duration_months === 12);
-          const defaultOption = yearlyOption || plan.pricing_options[0];
-          defaultDurations[plan.id] = defaultOption.duration_months;
-        } else {
-          defaultDurations[plan.id] = 3; // fallback
-        }
-      });
-      setSelectedDurations(defaultDurations);
       
       const subRes = await subscriptionAPI.getCurrent();
       setCurrentSubscription(subRes.data);
@@ -97,12 +55,7 @@ export const SubscriptionPage = () => {
     if (!couponCode) return;
     try {
       setValidatingCoupon(true);
-      const durationMonths = selectedDurations[planId] || 3;
-      const res = await subscriptionAPI.validateCoupon({ 
-        code: couponCode, 
-        plan_id: planId,
-        duration_months: durationMonths
-      });
+      const res = await subscriptionAPI.validateCoupon({ code: couponCode, plan_id: planId });
       setAppliedCoupon({ ...res.data, planId });
       toast.success('Coupon applied successfully!');
     } catch (error) {
@@ -115,65 +68,15 @@ export const SubscriptionPage = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Clear coupon when duration changes
-  useEffect(() => {
-    setAppliedCoupon(null);
-    setCouponCode('');
-  }, [selectedDurations]);
-
-  const handleDurationChange = (planId, months) => {
-    setSelectedDurations(prev => ({ ...prev, [planId]: months }));
-  };
-
-  const getPlanPrice = (plan, durationMonths) => {
-    if (plan.plan_name === 'Free Account') return { price: 0, originalPrice: 0, discount: 0 };
-    
-    // Check if custom pricing exists for this duration
-    if (plan.pricing_options && plan.pricing_options.length > 0) {
-      const pricing = plan.pricing_options.find(p => p.duration_months === durationMonths);
-      if (pricing) {
-        return {
-          price: parseFloat(pricing.price),
-          originalPrice: parseFloat(pricing.original_price),
-          discount: parseFloat(pricing.discount_percent)
-        };
-      }
-    }
-    
-    // Fallback to calculated pricing with default discounts
-    const monthlyPrice = parseFloat(plan.price);
-    const basePrice = monthlyPrice * durationMonths;
-    
-    // Apply default duration discounts
-    let discountPercent = 0;
-    if (durationMonths === 3) discountPercent = 5;
-    else if (durationMonths === 6) discountPercent = 10;
-    else if (durationMonths === 12) discountPercent = 15;
-    else if (durationMonths === 24) discountPercent = 25;
-    else if (durationMonths === 36) discountPercent = 30;
-    
-    const discountAmount = (basePrice * discountPercent) / 100;
-    const finalPrice = basePrice - discountAmount;
-    
-    return {
-      price: finalPrice,
-      originalPrice: basePrice,
-      discount: discountPercent
-    };
-  };
-
   const handleUpgrade = async (plan) => {
-    const durationMonths = selectedDurations[plan.id] || 3;
     const couponId = (appliedCoupon && appliedCoupon.planId === plan.id) ? appliedCoupon.coupon_id : null;
-    const priceInfo = getPlanPrice(plan, durationMonths);
-    const finalPrice = couponId && appliedCoupon ? appliedCoupon.finalPrice : priceInfo.price;
+    const finalPrice = couponId ? appliedCoupon.finalPrice : plan.price;
 
     if (plan.price === 0 || finalPrice === 0) {
       try {
         setUpgrading(true);
         await subscriptionAPI.upgrade({ 
           plan_id: plan.id,
-          duration_months: durationMonths,
           coupon_id: couponId
         });
         toast.success(`Switched to ${plan.plan_name} successfully`);
@@ -190,35 +93,23 @@ export const SubscriptionPage = () => {
 
     try {
       setUpgrading(true);
-      
-      // Ensure Razorpay script is loaded
-      await loadRazorpayScript();
-      
       const res = await subscriptionAPI.processPayment({ 
         plan_id: plan.id,
-        duration_months: durationMonths,
         coupon_id: couponId
       });
       const { order, key_id } = res.data;
 
-      if (!window.Razorpay) {
-        toast.error("Razorpay script not loaded. Please refresh the page.");
-        setUpgrading(false);
-        return;
-      }
-
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || key_id,
+        key: key_id,
         amount: order.amount,
         currency: order.currency,
         name: "BillEasy SaaS",
-        description: `Upgrade to ${plan.plan_name} Plan (${durationMonths} Months)`,
+        description: `Upgrade to ${plan.plan_name} Plan`,
         order_id: order.id,
         handler: async (response) => {
           try {
             await subscriptionAPI.upgrade({
               plan_id: plan.id,
-              duration_months: durationMonths,
               payment_id: response.razorpay_payment_id,
               order_id: response.razorpay_order_id,
               signature: response.razorpay_signature,
@@ -333,13 +224,6 @@ export const SubscriptionPage = () => {
           const isPremium = plan.plan_name === 'Premium';
           const isEnterprise = plan.plan_name === 'Enterprise';
           const isCurrent = currentSubscription?.plan_id === plan.id;
-          const selectedDuration = selectedDurations[plan.id] || 3;
-          const priceInfo = getPlanPrice(plan, selectedDuration);
-          
-          // Get available duration options for this plan
-          const availableDurations = plan.pricing_options && plan.pricing_options.length > 0
-            ? DURATION_OPTIONS.filter(d => plan.pricing_options.some(p => p.duration_months === d.months && p.is_active))
-            : DURATION_OPTIONS;
 
           return (
             <Card key={plan.id} className={`border-t-4 shadow-sm bg-white flex flex-col ${
@@ -355,79 +239,24 @@ export const SubscriptionPage = () => {
                     </div>
                     {isPremium && <Badge className="bg-orange-500 hover:bg-orange-600 text-white">👑 Most Popular</Badge>}
                 </div>
-                
-                {/* Duration Selector */}
-                {!isFree && (
-                  <div className="mt-4">
-                    <label className="text-xs font-medium text-slate-500 mb-2 block">Select Duration</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {availableDurations.map((duration) => (
-                        <button
-                          key={duration.months}
-                          onClick={() => handleDurationChange(plan.id, duration.months)}
-                          className={cn(
-                            "relative px-2 py-2 text-xs font-medium rounded-lg border transition-all",
-                            selectedDuration === duration.months
-                              ? "bg-emerald-50 border-emerald-500 text-emerald-700"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                          )}
-                        >
-                          {duration.popular && (
-                            <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">
-                              Popular
-                            </span>
-                          )}
-                          <div>{duration.label}</div>
-                          {duration.discountLabel && (
-                            <div className={cn(
-                              "text-[9px] mt-0.5",
-                              selectedDuration === duration.months ? "text-emerald-600" : "text-slate-400"
-                            )}>
-                              {duration.discountLabel}
-                            </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
                 <div className="mt-6">
-                  {isFree ? (
+                  {plan.price > 0 ? (
+                    <div className="space-y-1">
+                      <div className="flex items-baseline gap-2">
+                        {appliedCoupon && appliedCoupon.planId === plan.id && (
+                          <span className="text-2xl line-through text-slate-400">{formatCurrency(plan.price)}</span>
+                        )}
+                        <span className="text-4xl font-black text-slate-900">
+                          {appliedCoupon && appliedCoupon.planId === plan.id ? formatCurrency(appliedCoupon.finalPrice) : formatCurrency(plan.price)}
+                        </span>
+                        <span className="text-slate-500 text-sm font-medium">/3 month</span>
+                      </div>
+                      <p className="text-xs text-slate-400">Approx. {formatCurrency(Math.round((appliedCoupon && appliedCoupon.planId === plan.id ? appliedCoupon.finalPrice : plan.price)/3))}/month</p>
+                    </div>
+                  ) : (
                     <div className="h-14 flex items-baseline gap-2">
                         <span className="text-4xl font-black text-slate-900">Free</span>
                         <span className="text-slate-500 text-sm font-medium">Forever</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="flex items-baseline gap-2">
-                        {priceInfo.originalPrice > priceInfo.price && (
-                          <span className="text-2xl line-through text-slate-400">{formatCurrency(priceInfo.originalPrice)}</span>
-                        )}
-                        <span className="text-4xl font-black text-slate-900">
-                          {appliedCoupon && appliedCoupon.planId === plan.id 
-                            ? formatCurrency(appliedCoupon.finalPrice) 
-                            : formatCurrency(priceInfo.price)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500 text-sm font-medium">
-                          for {selectedDuration} month{selectedDuration > 1 ? 's' : ''}
-                        </span>
-                        {priceInfo.discount > 0 && (
-                          <Badge className="bg-green-100 text-green-700 border-0 text-xs">
-                            Save {priceInfo.discount}%
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-400">
-                        Approx. {formatCurrency(Math.round((appliedCoupon && appliedCoupon.planId === plan.id ? appliedCoupon.finalPrice : priceInfo.price) / selectedDuration))}/month
-                      </p>
-                      {appliedCoupon && appliedCoupon.planId === plan.id && (
-                        <p className="text-xs text-emerald-600 font-medium">
-                          Coupon applied: -{formatCurrency(appliedCoupon.discount)}
-                        </p>
-                      )}
                     </div>
                   )}
                 </div>

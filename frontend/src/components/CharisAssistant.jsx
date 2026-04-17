@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, MessageSquare, Bot, User, Loader2, Sparkles, Minus, Crown } from 'lucide-react';
+import { Send, X, MessageSquare, Bot, User, Loader2, Sparkles, Minus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,7 @@ const CharisAssistant = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
-  const { isAuthenticated, loading, subscription } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -41,41 +41,13 @@ const CharisAssistant = () => {
     } catch (error) {
       console.error(">>> Charis Connection Error:", error);
       console.error(">>> Error Response:", error.response?.data);
-      
-      // Show specific error for non-premium users
-      if (error.response?.status === 403) {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: "Charis AI Assistant is only available for Premium and Enterprise plan users. Please upgrade your plan to access this feature."
-        }]);
-      } else {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: "I'm sorry, I'm having trouble connecting right now. Please try again later."
-        }]);
-      }
+      setMessages(prev => [...prev, { role: 'assistant', content: "I'm sorry, I'm having trouble connecting right now. Please try again later." }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Check if user has Premium or Enterprise plan
-  const hasPremiumAccess = () => {
-    if (!subscription) return false;
-    const plan = subscription.Plan || subscription.plan;
-    if (!plan || !plan.plan_name) return false;
-    
-    const planName = plan.plan_name.toLowerCase();
-    return planName === 'premium' || planName === 'enterprise';
-  };
-
-  // Don't show if:
-  // 1. Still loading auth state
-  // 2. Not authenticated
-  // 3. Doesn't have Premium/Enterprise plan
-  if (loading || !isAuthenticated || !hasPremiumAccess()) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end">
@@ -89,11 +61,8 @@ const CharisAssistant = () => {
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm tracking-tight">Charis</h3>
-                  <Crown className="w-3 h-3 text-amber-400" />
-                </div>
-                <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Premium Assistant</p>
+                <h3 className="font-bold text-sm tracking-tight">Charis</h3>
+                <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Billing Expert</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -155,7 +124,7 @@ const CharisAssistant = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Charis about your business..."
+              placeholder="Ask Charis anything..."
               className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none"
             />
             <button 
@@ -196,11 +165,6 @@ const CharisAssistant = () => {
         {/* Icon */}
         <div className="relative z-10 text-white">
           <Sparkles className={cn("w-7 h-7 transition-all", isLoading ? "animate-spin" : "group-hover:scale-110")} />
-        </div>
-
-        {/* Premium Badge */}
-        <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center shadow-lg">
-          <Crown className="w-3 h-3 text-amber-900" />
         </div>
       </button>
 

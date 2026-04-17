@@ -40,17 +40,18 @@ const register = async (req, res) => {
       role: 'owner'
     });
 
-    // Find or create Free plan (matches seeded 'Free Account')
-    let freePlan = await Plan.findOne({ where: { plan_name: 'Free Account' } });
+    // Find or create Free plan
+    let freePlan = await Plan.findOne({ where: { plan_name: 'Free' } });
 
     if (!freePlan) {
       freePlan = await Plan.create({
-        plan_name: 'Free Account',
+        plan_name: 'Free',
         price: 0,
-        billing_cycle: 'lifetime',
+        billing_cycle: 'monthly',
         max_users: 1,
         max_invoices_per_month: 50,
-        max_products: 100
+        max_products: 50,
+        storage_limit: 100
       });
     }
 
@@ -127,13 +128,6 @@ const login = async (req, res) => {
 
     if (!user.is_active) {
       return res.status(401).json({ error: 'Account is deactivated' });
-    }
-
-    // Check if user has a password set
-    if (!user.password) {
-      return res.status(401).json({ 
-        error: 'Password not set. Please use forgot password to set a new password.' 
-      });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);

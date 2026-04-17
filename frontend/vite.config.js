@@ -14,9 +14,10 @@ export default defineConfig({
       }
     }
   },
-  envPrefix: ['VITE_', 'REACT_APP_'],
+  envPrefix: 'REACT_APP_',
   define: {
     // Security fix: map specific required variables
+    'process.env.REACT_APP_BACKEND_URL': JSON.stringify(process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001'),
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
   },
   resolve: {
@@ -25,7 +26,6 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'dist',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {

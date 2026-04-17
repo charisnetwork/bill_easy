@@ -5,11 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "reset:admin": "node scripts/resetSuperAdminPassword.js",
-    "reset:sql": "node scripts/generateResetSQL.js",
-    "reset:fix": "node scripts/resetWithSyncFix.js",
-    "reset:env": "node scripts/resetViaEnvironment.js"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "express": "^4.21.0",
@@ -19,8 +15,7 @@
     "dotenv": "^16.4.5",
     "cors": "^2.8.5",
     "morgan": "^1.10.0",
-    "axios": "^1.7.7",
-    "bcryptjs": "^2.4.3"
+    "axios": "^1.7.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"

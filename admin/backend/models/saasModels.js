@@ -14,19 +14,6 @@ const Plan = saasDB.define('Plan', {
   billing_cycle: { type: DataTypes.ENUM('monthly','3month','6month','yearly','lifetime'), defaultValue: 'monthly' }
 }, { tableName: 'plans' });
 
-const PlanPricing = saasDB.define('PlanPricing', {
-  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-  plan_id: { type: DataTypes.UUID, allowNull: false },
-  duration_months: { type: DataTypes.INTEGER, allowNull: false },
-  duration_label: { type: DataTypes.STRING, allowNull: false },
-  price: { type: DataTypes.DECIMAL(10,2), allowNull: false },
-  original_price: { type: DataTypes.DECIMAL(10,2), allowNull: false },
-  discount_percent: { type: DataTypes.DECIMAL(5,2), defaultValue: 0 },
-  discount_amount: { type: DataTypes.DECIMAL(10,2), defaultValue: 0 },
-  is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-  is_popular: { type: DataTypes.BOOLEAN, defaultValue: false }
-}, { tableName: 'plan_pricing' });
-
 const PlanFeature = saasDB.define('PlanFeature', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   plan_name: { type: DataTypes.STRING, allowNull: false },
@@ -83,10 +70,6 @@ Subscription.belongsTo(Coupon, { foreignKey: 'coupon_id' });
 Coupon.hasMany(Subscription, { foreignKey: 'coupon_id' });
 Company.hasMany(User, { foreignKey: 'company_id' });
 
-// Plan Pricing Associations
-Plan.hasMany(PlanPricing, { foreignKey: 'plan_id' });
-PlanPricing.belongsTo(Plan, { foreignKey: 'plan_id' });
-
 // Coupon - Affiliate Relationship (Cross-database)
 const { Affiliate } = require('./adminModels');
 Coupon.belongsTo(Affiliate, { foreignKey: 'affiliate_id', as: 'affiliate', constraints: false });
@@ -97,7 +80,6 @@ module.exports = {
   Subscription, 
   Plan, 
   PlanFeature,
-  PlanPricing,
   Invoice,
   User,
   Coupon

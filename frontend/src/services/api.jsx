@@ -1,13 +1,6 @@
 import axios from 'axios';
 
-/**
- * PRODUCTION URL CONFIGURATION
- * We hardcode the production URL as the primary value for charisbilleasy.store 
- * to ensure absolute routing and prevent relative path errors.
- */
-// Default to relative path for Monorepo Gateway, or use environment variable
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || '';
-const API_URL = BASE_URL ? `${BASE_URL}/api` : '/api';
+const API_URL = (import.meta.env.VITE_BACKEND_URL || import.meta.env.REACT_APP_BACKEND_URL || '') + '/api';
 
 const getToken = () => localStorage.getItem('token');
 
@@ -15,14 +8,9 @@ const api = axios.create({
   baseURL: API_URL
 });
 
-export { BASE_URL, API_URL };
-
-// Log for debugging (remove in final production)
-console.log('[API] Using Backend URL:', API_URL);
-
 api.interceptors.request.use((config) => {
   const token = getToken();
-  if (token && token !== 'undefined' && token !== 'null') {
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -33,9 +21,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -181,17 +167,12 @@ export const reportAPI = {
 // Subscription APIs
 export const subscriptionAPI = {
   getPlans: () => api.get('/subscription/plans'),
-  getPlanPricing: (planId) => api.get(`/subscription/pricing/${planId}`),
   getCurrent: () => api.get('/subscription/current'),
   getUsage: () => api.get('/subscription/usage'),
   upgrade: (data) => api.post('/subscription/upgrade', data),
   cancel: () => api.post('/subscription/cancel'),
   processPayment: (data) => api.post('/subscription/payment', data),
-  validateCoupon: (data) => api.post('/subscription/validate-coupon', data),
-  // Admin endpoints for plan pricing
-  getAllPlanPricing: () => api.get('/subscription/admin/pricing'),
-  createPlanPricing: (data) => api.post('/subscription/admin/pricing', data),
-  deletePlanPricing: (id) => api.delete(`/subscription/admin/pricing/${id}`)
+  validateCoupon: (data) => api.post('/subscription/validate-coupon', data)
 };
 
 // E-Way Bill APIs
@@ -218,8 +199,8 @@ export const paymentAPI = {
 
 // Utility APIs
 export const utilityAPI = {
-  getGST: (gstin) => api.get(`/utils/gst/${gstin}`),
-  getPincode: (pincode) => api.get(`/utils/pincode/${pincode}`)
+  getGST: (gstin) => api.get(`/utilities/gst/${gstin}`),
+  getPincode: (pincode) => api.get(`/utilities/pincode/${pincode}`)
 };
 
 export default api;

@@ -85,7 +85,7 @@ const User = sequelize.define('User',{
   id:{ type:DataTypes.UUID, defaultValue:DataTypes.UUIDV4, primaryKey:true },
   company_id: { type: DataTypes.UUID, allowNull: true },
   email:{ type:DataTypes.STRING, allowNull:false, unique:true },
-  password:{ type:DataTypes.STRING, allowNull:true }, // Temporarily nullable for migration
+  password:{ type:DataTypes.STRING, allowNull:false }, 
   name:{ type:DataTypes.STRING, allowNull:false },
   phone:{ type:DataTypes.STRING },
   role:{ type:DataTypes.ENUM('owner','admin','staff'), defaultValue:'staff' },

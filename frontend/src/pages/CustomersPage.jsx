@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { customerAPI, creditNoteAPI, utilityAPI, BASE_URL } from '../services/api';
+import { customerAPI, creditNoteAPI, utilityAPI } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -193,7 +193,7 @@ const CustomerDetails = ({ customer, onClose }) => {
 
   const downloadCN = (id) => {
     const token = localStorage.getItem('token');
-    window.open(`${BASE_URL}/api/credit-notes/${id}/pdf?token=${token}`, "_blank");
+    window.open(`${process.env.REACT_APP_BACKEND_URL}/api/credit-notes/${id}/pdf?token=${token}`, "_blank");
   };
 
   return (

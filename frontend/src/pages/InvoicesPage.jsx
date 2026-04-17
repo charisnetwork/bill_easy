@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { invoiceAPI, customerAPI, productAPI, BASE_URL } from '../services/api';
+import { invoiceAPI, customerAPI, productAPI } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -314,7 +314,7 @@ export const InvoicesPage = () => {
                                 className="h-8 w-8 text-indigo-600 hover:bg-indigo-50"
                                 onClick={() => {
                                   const token = localStorage.getItem('token');
-                                  window.open(`${BASE_URL}/api/invoices/${invoice.id}/pdf?token=${token}`, "_blank");
+                                  window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoice.id}/pdf?token=${token}`, "_blank");
                                 }}
                               >
                                 <Download className="w-4 h-4" />

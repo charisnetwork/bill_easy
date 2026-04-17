@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BASE_URL } from '../services/api.jsx';
 import { 
   Facebook, 
   Twitter, 
@@ -17,8 +16,6 @@ import {
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { user } = useAuth();
-  const [submitted, setSubmitted] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
 
   return (
     <footer className="bg-slate-900 text-slate-300 py-12 px-6 mt-auto print:hidden">
@@ -67,105 +64,52 @@ const Footer = () => {
           {/* Quick Enquiry Section */}
           <div className="space-y-4">
             <h4 className="text-white font-bold uppercase tracking-wider text-xs">Quick Enquiry</h4>
-            {submitted ? (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 animate-in fade-in zoom-in duration-300">
-                <p className="text-sm font-medium text-emerald-700 leading-relaxed text-center">
-                  Thank you for contacting us we will get in touch with you soon
-                </p>
-                <button 
-                  onClick={() => setSubmitted(false)}
-                  className="w-full mt-3 text-[10px] uppercase font-bold text-emerald-600 hover:text-emerald-800 transition-colors underline"
-                >
-                  Send another
-                </button>
-              </div>
-            ) : (
-              <form 
-                className="space-y-3"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setIsLoading(true);
-                  
-                  const formData = new FormData(e.target);
-                  const data = {
-                    name: formData.get('name'),
-                    phone: formData.get('phone'),
-                    email: formData.get('email'),
-                    message: formData.get('message')
-                  };
-                  
-                  console.log('[Footer Enquiry] Submitting data:', data);
-                  console.log('[Footer Enquiry] API URL:', `${BASE_URL}/api/enquiries`);
-                  
-                  try {
-                    const response = await fetch(`${BASE_URL}/api/enquiries`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(data)
-                    });
-                    
-                    console.log('[Footer Enquiry] Response status:', response.status);
-                    console.log('[Footer Enquiry] Response OK:', response.ok);
-                    
-                    if (response.ok) {
-                      const result = await response.json();
-                      console.log('[Footer Enquiry] Success:', result);
-                      setSubmitted(true);
-                      e.target.reset();
-                    } else {
-                      const errorText = await response.text();
-                      console.error('[Footer Enquiry] Server error:', response.status, errorText);
-                      alert(`Failed to send (Error ${response.status}). Please try again.`);
-                    }
-                  } catch (err) {
-                    console.error('[Footer Enquiry] Network/Error:', err.message);
-                    console.error('[Footer Enquiry] Full error:', err);
-                    alert(`Error: ${err.message}. Please check your internet and try again.`);
-                  } finally {
-                    setIsLoading(false);
+            <form 
+              className="space-y-3"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = {
+                  name: formData.get('name'),
+                  phone: formData.get('phone'),
+                  message: 'Quick callback request from footer'
+                };
+                try {
+                  const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/enquiries`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                  });
+                  if (response.ok) {
+                    alert('Request sent successfully!');
+                    e.target.reset();
                   }
-                }}
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+            >
+              <input 
+                name="name"
+                type="text" 
+                placeholder="Your Name" 
+                required
+                className="w-full bg-slate-800 border-none rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-white"
+              />
+              <input 
+                name="phone"
+                type="tel" 
+                placeholder="Phone Number" 
+                required
+                className="w-full bg-slate-800 border-none rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-white"
+              />
+              <button 
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs transition-colors shadow-lg shadow-blue-900/20"
               >
-                <input 
-                  name="name"
-                  type="text" 
-                  placeholder="1. Name *" 
-                  required
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 placeholder-slate-500"
-                />
-                <input 
-                  name="phone"
-                  type="tel" 
-                  placeholder="2. Mobile No. *" 
-                  required
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 placeholder-slate-500"
-                />
-                <input 
-                  name="email"
-                  type="email" 
-                  placeholder="3. Email *" 
-                  required
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 placeholder-slate-500"
-                />
-                <textarea 
-                  name="message"
-                  placeholder="4. Message" 
-                  rows="3"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 placeholder-slate-500 resize-none"
-                ></textarea>
-                <button 
-                  type="submit"
-                  disabled={isLoading}
-                  className={`w-full font-bold py-2 rounded-lg text-sm transition-colors shadow-lg ${
-                    isLoading 
-                      ? 'bg-slate-400 cursor-not-allowed' 
-                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/20'
-                  }`}
-                >
-                  {isLoading ? 'Sending...' : 'Enquire Now'}
-                </button>
-              </form>
-            )}
+                Request Callback
+              </button>
+            </form>
           </div>
 
           {/* Reach Us */}
@@ -178,7 +122,7 @@ const Footer = () => {
               </div>
               <div className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-blue-500 mt-1" />
-                <span>support@charisbilleasy.store</span>
+                <span>support@billeasy.com</span>
               </div>
             </div>
           </div>

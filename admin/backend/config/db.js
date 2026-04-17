@@ -1,7 +1,9 @@
 const { Sequelize } = require('sequelize');
-require('dotenv').config();
+const path = require('path');
 
-const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production' || process.env.RAILWAY_PRIVATE_DOMAIN;
+// Load .env file from the project root or current directory
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+require('dotenv').config(); // Also try default location
 
 const sequelizeOptions = {
   dialect: 'postgres',
@@ -13,8 +15,22 @@ const sequelizeOptions = {
   }
 };
 
-// Enable SSL only for Render hosting (not Railway)
-if (process.env.DATABASE_URL?.includes('render.com')) {
+// Log environment for debugging (remove in production)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('[DB Config] Environment check:', {
+    DATABASE_URL_SaaS: process.env.DATABASE_URL_SaaS ? 'Set' : 'Not set',
+    DATABASE_URL_ADMIN: process.env.DATABASE_URL_ADMIN ? 'Set' : 'Not set',
+    DATABASE_URL: process.env.DATABASE_URL ? 'Set' : 'Not set',
+    NODE_ENV: process.env.NODE_ENV
+  });
+}
+
+const saasUrl = process.env.DATABASE_URL_SaaS || process.env.DATABASE_URL;
+const adminUrl = process.env.DATABASE_URL_ADMIN || process.env.DATABASE_URL;
+
+// Add SSL for cloud hosting if DATABASE_URL is present
+if (saasUrl?.includes('railway') || adminUrl?.includes('railway') || 
+    saasUrl?.includes('render') || adminUrl?.includes('render')) {
   sequelizeOptions.dialectOptions = {
     ssl: {
       require: true,
@@ -23,27 +39,19 @@ if (process.env.DATABASE_URL?.includes('render.com')) {
   };
 }
 
-// Disable SSL for Railway internal connections
-if (isRailway) {
-  sequelizeOptions.dialectOptions = {
-    ssl: false
-  };
+if (!saasUrl) {
+  console.error('[DB Config] Missing environment variables. Required: DATABASE_URL_SaaS or DATABASE_URL');
+  console.error('[DB Config] Available env vars:', Object.keys(process.env).filter(k => k.includes('DATABASE')));
+  throw new Error('DATABASE_URL_SaaS or DATABASE_URL is missing in environment variables');
 }
 
-// Both DBs use same connection (different schemas/tables)
-const dbUrlInput = process.env.DATABASE_URL || 'postgres://pachu:nishu@localhost:5432/mybillbook';
-const dbUrl = (typeof dbUrlInput === 'string' && (dbUrlInput.startsWith('postgres://') || dbUrlInput.startsWith('postgresql://')))
-  ? dbUrlInput
-  : 'postgres://pachu:nishu@localhost:5432/mybillbook';
+if (!adminUrl) {
+  console.error('[DB Config] Missing environment variables. Required: DATABASE_URL_ADMIN or DATABASE_URL');
+  throw new Error('DATABASE_URL_ADMIN or DATABASE_URL is missing in environment variables');
+}
 
-const saasDB = new Sequelize(dbUrl, sequelizeOptions);
+const saasDB = new Sequelize(saasUrl, sequelizeOptions);
 
-// Use DATABASE_URL_ADMIN if provided and valid, otherwise use same as saasDB
-const adminUrlInput = process.env.DATABASE_URL_ADMIN;
-const isValidAdminUrl = adminUrlInput && typeof adminUrlInput === 'string' && (adminUrlInput.startsWith('postgres://') || adminUrlInput.startsWith('postgresql://'));
-
-const adminDB = isValidAdminUrl
-  ? new Sequelize(adminUrlInput, sequelizeOptions)
-  : saasDB;
+const adminDB = new Sequelize(adminUrl, sequelizeOptions);
 
 module.exports = { saasDB, adminDB };

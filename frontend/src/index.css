@@ -230,37 +230,6 @@
 }
 
 /* =================================
-   INPUT WITH ICON FIX
-================================= */
-
-/* Fix icon overlap by adding horizontal padding when input has an icon */
-.input-with-icon input,
-.relative > input[class*="pl-"],
-.search-input {
-  padding-left: 40px !important;
-}
-
-/* Ensure icon is correctly positioned within relative container */
-.input-with-icon,
-.search-container {
-  position: relative;
-}
-
-.input-with-icon svg,
-.input-with-icon .icon,
-.search-container svg,
-.search-container .icon,
-.relative > svg,
-.relative > .icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* =================================
    DEBUG WRAPPER FIX
 ================================= */
 

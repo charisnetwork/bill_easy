@@ -1,7 +1,7 @@
 const { Purchase, PurchaseItem, Supplier, Product, Payment, StockMovement, StockLevel, Godown, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const fs = require('fs');
-const pdf = require('pdf-parse');
+const pdfParse = require('pdf-parse');
 
 const generateBillNumber = async (companyId) => {
   const currentYear = new Date().getFullYear();
@@ -520,10 +520,8 @@ const parsePurchasePDF = async (req, res) => {
 
     const dataBuffer = fs.readFileSync(req.file.path);
     
-    // Correct API for pdf-parse v2
-    const parser = new pdf.PDFParse({ data: dataBuffer });
-    const data = await parser.getText();
-    await parser.destroy(); // Always call destroy() to free memory
+    // Use pdf-parse v1 API
+    const data = await pdfParse(dataBuffer);
     
     if (!data || !data.text) {
       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);

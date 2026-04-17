@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BASE_URL } from '../services/api';
 import {
   LayoutDashboard, Users, Package, FileText, ShoppingCart,
   Wallet, BarChart3, Settings, LogOut, Menu, X, CreditCard,
-  Building2, ChevronDown, Bell, Search, Truck, Plus, Shield
+  Building2, ChevronDown, Bell, Search, Truck, Plus
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -347,7 +346,7 @@ export const DashboardLayout = ({ children }) => {
               <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-sm">
                 {company?.logo ? (
                   <img 
-                    src={company.logo.startsWith('http') ? company.logo : `${BASE_URL}/uploads${company.logo.startsWith('/') ? '' : '/'}${company.logo}`} 
+                    src={company.logo.startsWith('http') ? company.logo : `${process.env.REACT_APP_BACKEND_URL}/uploads${company.logo.startsWith('/') ? '' : '/'}${company.logo}`} 
                     alt="Logo" 
                     className="w-full h-full object-contain p-1"
                   />
@@ -386,21 +385,22 @@ export const DashboardLayout = ({ children }) => {
                 <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl shadow-xl border-slate-200">
                   <DropdownMenuItem 
                     onClick={() => navigate('/settings')}
-                    className="rounded-lg py-2.5 cursor-pointer items-center"
-                    style={{ paddingLeft: '45px' }}
+                    className="rounded-lg py-2.5 cursor-pointer"
                   >
-                    <Settings className="w-4 h-4 mr-3 text-slate-500 absolute left-3" />
-                    <span className="text-sm font-medium">Settings</span>
+                    <Settings className="w-4 h-4 mr-3 text-slate-500" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">Settings</span>
+                      <span className="text-[10px] text-slate-400">Account & Preferences</span>
+                    </div>
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator className="my-2" />
 
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-rose-600 rounded-lg py-2.5 cursor-pointer focus:bg-rose-50 focus:text-rose-700 items-center"
-                    style={{ paddingLeft: '45px' }}
+                    className="text-rose-600 rounded-lg py-2.5 cursor-pointer focus:bg-rose-50 focus:text-rose-700"
                   >
-                    <LogOut className="w-4 h-4 mr-3 absolute left-3" />
+                    <LogOut className="w-4 h-4 mr-3" />
                     <span className="text-sm font-medium">Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
