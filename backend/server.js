@@ -31,6 +31,8 @@ const paymentRoutes = require('./routes/payments');
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 /* =========================================
    SECURITY
 ========================================= */
@@ -146,7 +148,7 @@ app.use('/api/credit-notes', creditNoteRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 app.use('/api/staff', require('./routes/staff'));
-app.use("/api/utils", require("./routes/utilities"));
+app.use("/api/utilities", require("./routes/utilities"));
 app.use("/uploads", express.static("uploads"));
 
 /* =========================================

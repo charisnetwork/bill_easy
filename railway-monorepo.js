@@ -1,148 +1,107 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-const path = require('path');
 const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 8080;
 
-// Internal ports for backends
-const MAIN_BACKEND_PORT = 8001;
-const ADMIN_BACKEND_PORT = 3025;
+app.set('trust proxy', 1);
 
-console.log('🚀 Starting Bill Easy Monorepo Gateway...');
-console.log(`📡 External Port: ${PORT}`);
-
-// Health check endpoint for Railway
-app.get('/health', async (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    service: 'monorepo-gateway',
-    timestamp: new Date().toISOString(),
-    port: PORT
-  });
-});
+console.log('🚀 Starting Monorepo Gateway...');
 
 // Start Main Backend
-console.log('[Gateway] Starting Main Backend...');
-const mainBackend = spawn('node', ['server.js'], {
+const mainBackend = spawn('node', ['server.js'], { 
   cwd: path.join(__dirname, 'backend'),
-  env: { ...process.env, PORT: MAIN_BACKEND_PORT }
-});
-
-mainBackend.stdout.on('data', (data) => {
-  process.stdout.write(`[Main Backend]: ${data}`);
-});
-
-mainBackend.stderr.on('data', (data) => {
-  process.stderr.write(`[Main Backend Error]: ${data}`);
-});
-
-mainBackend.on('close', (code) => {
-  console.log(`[Main Backend] Process exited with code ${code}`);
+  env: Object.assign({}, process.env, { PORT: '8001' }),
+  stdio: 'inherit'
 });
 
 // Start Admin Backend
-console.log('[Gateway] Starting Admin Backend...');
-const adminBackend = spawn('node', ['server.js'], {
+const adminBackend = spawn('node', ['server.js'], { 
   cwd: path.join(__dirname, 'admin/backend'),
-  env: { ...process.env, PORT: ADMIN_BACKEND_PORT }
+  env: Object.assign({}, process.env, { PORT: '3025' }),
+  stdio: 'inherit'
 });
 
-adminBackend.stdout.on('data', (data) => {
-  process.stdout.write(`[Admin Backend]: ${data}`);
-});
+// 1. Serve Main Frontend Static Files (HIGHEST PRIORITY)
+const mainFrontendPath = path.join(__dirname, 'frontend/dist');
+console.log(`🔍 Checking for main frontend at: ${mainFrontendPath}`);
 
-adminBackend.stderr.on('data', (data) => {
-  process.stderr.write(`[Admin Backend Error]: ${data}`);
-});
+if (fs.existsSync(mainFrontendPath) && fs.existsSync(path.join(mainFrontendPath, 'index.html'))) {
+  console.log('✅ Main frontend found, serving static files.');
+  app.use(express.static(mainFrontendPath));
+} else {
+  console.log('⚠️ Main frontend NOT found or index.html missing.');
+}
 
-adminBackend.on('close', (code) => {
-  console.log(`[Admin Backend] Process exited with code ${code}`);
-});
+// Log directory structure for debugging
+console.log('📂 Current Directory:', __dirname);
+console.log('📂 Contents:', fs.readdirSync(__dirname));
+if (fs.existsSync(path.join(__dirname, 'frontend'))) {
+  console.log('📂 Frontend Contents:', fs.readdirSync(path.join(__dirname, 'frontend')));
+}
 
-// Wait a bit for backends to start, then setup proxy
-setTimeout(() => {
-  // Proxy /api requests to Main Backend
-  app.use('/api', createProxyMiddleware({
-    target: `http://127.0.0.1:${MAIN_BACKEND_PORT}`,
-    changeOrigin: true,
-    ws: true,
-    onError: (err, req, res) => {
-      console.error('[Proxy Error] Main Backend:', err.message);
-      res.status(503).json({ error: 'Backend service temporarily unavailable' });
-    }
-  }));
+// 2. Proxy API routes (Use specific matching)
+app.use('/admin/api', createProxyMiddleware({ 
+  target: 'http://localhost:3025', 
+  pathRewrite: { '^/admin/api': '/api' },
+  changeOrigin: true,
+  logLevel: 'debug'
+}));
 
-  // Proxy /admin/api requests to Admin Backend
-  app.use('/admin/api', createProxyMiddleware({
-    target: `http://127.0.0.1:${ADMIN_BACKEND_PORT}`,
-    changeOrigin: true,
-    onError: (err, req, res) => {
-      console.error('[Proxy Error] Admin Backend:', err.message);
-      res.status(503).json({ error: 'Admin backend service temporarily unavailable' });
-    }
-  }));
+app.use('/api', createProxyMiddleware({ 
+  target: 'http://localhost:8001', 
+  changeOrigin: true,
+  logLevel: 'debug'
+}));
 
-  // Serve uploads from backend
-  app.use('/uploads', express.static(path.join(__dirname, 'backend/uploads')));
-  app.use('/admin/uploads', express.static(path.join(__dirname, 'admin/backend/uploads')));
+// 3. Serve Uploads
+app.use('/uploads', express.static(path.join(__dirname, 'backend/uploads')));
 
-  // Serve Frontend static files
-  const frontendDistPath = path.join(__dirname, 'frontend/dist');
-  app.use(express.static(frontendDistPath));
-
-  // Handle Frontend routing (SPA fallback)
-  app.get('*', (req, res) => {
-    // If request is for an API that doesn't exist, don't serve index.html
-    if (req.url.startsWith('/api/') || req.url.startsWith('/admin/api/')) {
-      return res.status(404).json({ error: 'API route not found' });
-    }
-    res.sendFile(path.join(frontendDistPath, 'index.html'), (err) => {
-      if (err) {
-        console.error('[Frontend] Error serving index.html:', err.message);
-        res.status(404).send('Frontend build not found. Please run build first.');
-      }
-    });
+// 4. Serve Admin Frontend
+const adminFrontendPath = path.join(__dirname, 'admin/frontend/dist');
+if (fs.existsSync(adminFrontendPath)) {
+  app.use('/admin-portal', express.static(adminFrontendPath));
+  app.get('/admin-portal/*', (req, res) => {
+    res.sendFile(path.join(adminFrontendPath, 'index.html'));
   });
+}
 
-  // Error handler
-  app.use((err, req, res, next) => {
-    console.error('[Gateway Error]:', err);
-    res.status(500).json({ error: 'Internal server error' });
+// 5. Fallback for Main SPA (must be after /api and static)
+if (fs.existsSync(mainFrontendPath)) {
+  console.log('✅ SPA Fallback enabled');
+  app.get('/*', (req, res, next) => {
+    if (req.url.startsWith('/api') || req.url.startsWith('/admin/api') || req.url.startsWith('/health')) {
+      return next();
+    }
+    res.sendFile(path.join(mainFrontendPath, 'index.html'));
   });
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log('========================================');
-    console.log(`✅ Monorepo Gateway running on port ${PORT}`);
-    console.log(`🔗 Main Backend: http://localhost:${MAIN_BACKEND_PORT}`);
-    console.log(`🔗 Admin Backend: http://localhost:${ADMIN_BACKEND_PORT}`);
-    console.log(`🌐 Frontend: ${frontendDistPath}`);
-    console.log('========================================');
+} else {
+  console.log('⚠️ SPA Fallback disabled - frontend/dist not found');
+  app.get('/', (req, res) => {
+    res.send(`
+      <div style="font-family: sans-serif; padding: 2rem; text-align: center;">
+        <h1 style="color: #2563eb;">🚀 Bill Easy Monorepo Gateway is ACTIVE</h1>
+        <p>This is the gateway server. The main frontend (React) build was not found in <code>frontend/dist</code>.</p>
+        <div style="margin-top: 2rem; padding: 1rem; background: #f3f4f6; border-radius: 8px; display: inline-block;">
+          <strong>API Status:</strong> <a href="/api">Main API</a> | <a href="/admin/api">Admin API</a> | <a href="/health">Health Check</a>
+        </div>
+      </div>
+    `);
   });
+}
 
-}, 5000); // Wait 5 seconds for backends to initialize
-
-// Handle termination gracefully
-process.on('SIGTERM', () => {
-  console.log('[Gateway] SIGTERM received, shutting down...');
-  mainBackend.kill();
-  adminBackend.kill();
-  process.exit(0);
+// Health Check
+app.get('/health', (req, res) => {
+  res.json({ status: 'gateway-ok' });
 });
 
-process.on('SIGINT', () => {
-  console.log('[Gateway] SIGINT received, shutting down...');
-  mainBackend.kill();
-  adminBackend.kill();
-  process.exit(0);
-});
-
-// Handle uncaught errors
-process.on('uncaughtException', (err) => {
-  console.error('[Gateway] Uncaught Exception:', err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[Gateway] Unhandled Rejection:', reason);
+app.listen(PORT, () => {
+  console.log(`✅ Monorepo Gateway running on port ${PORT}`);
+  console.log(`🔗 Main API: /api`);
+  console.log(`🔗 Admin API: /admin/api`);
+  console.log(`🔗 Admin Portal: /admin-portal`);
+  console.log(`🔗 Uploads: /uploads`);
 });

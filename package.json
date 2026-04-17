@@ -1,18 +1,19 @@
 {
-  "name": "mybillbook-monorepo",
+  "name": "bill-easy-monorepo",
   "version": "1.0.0",
+  "main": "railway-monorepo.js",
   "scripts": {
     "start": "node railway-monorepo.js",
-    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "install-all": "npm install --force --legacy-peer-deps --prefix backend && npm install --force --legacy-peer-deps --prefix frontend && npm install --force --legacy-peer-deps --prefix admin/backend",
-    "postinstall": "npm run install-all"
+    "build": "npm run main:install && npm run admin:install && npm run frontend:build && npm run admin:frontend:build",
+    "main:install": "cd backend && npm install --omit=dev",
+    "admin:install": "cd admin/backend && npm install --omit=dev",
+    "frontend:build": "cd frontend && rm -rf dist && npm install --legacy-peer-deps && npm run build",
+    "admin:frontend:build": "cd admin/frontend && npm install --legacy-peer-deps && npm run build",
+    "install:all": "npm install && npm run main:install && npm run admin:install"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "express": "^4.21.0",
-    "http-proxy-middleware": "^3.0.0"
-  },
-  "devDependencies": {
-    "concurrently": "^9.2.1"
+    "http-proxy-middleware": "^3.0.3"
   }
 }
