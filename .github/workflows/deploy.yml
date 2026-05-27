@@ -1,0 +1,77 @@
+name: Cloudflare CI/CD Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-frontends:
+    name: Deploy Frontends to Cloudflare Pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies (Core Frontend)
+        working-directory: packages/core-app/frontend
+        run: npm install
+
+      - name: Build Core Frontend
+        working-directory: packages/core-app/frontend
+        run: npm run build
+
+      - name: Deploy Core Frontend
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy packages/core-app/frontend/dist --project-name="charis-billeasy-frontend"
+
+      - name: Install Dependencies (Admin Frontend)
+        working-directory: packages/admin-app/frontend
+        run: npm install
+
+      - name: Build Admin Frontend
+        working-directory: packages/admin-app/frontend
+        run: npm run build
+
+      - name: Deploy Admin Frontend
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy packages/admin-app/frontend/dist --project-name="charis-admin-frontend"
+
+  deploy-backends:
+    name: Deploy Backends to Cloudflare Workers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Deploy Core Backend
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: packages/core-app/backend
+          command: deploy
+
+      - name: Deploy Admin Backend
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: packages/admin-app/backend
+          command: deploy
