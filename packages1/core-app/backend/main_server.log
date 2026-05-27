@@ -1,0 +1,32 @@
+[dotenv@17.3.1] injecting env (15) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+Executing (default): SELECT 1+1 AS result
+Database connection established
+Executing (97065222-b173-44e2-85af-a6d7d96045c8): START TRANSACTION;
+Executing (97065222-b173-44e2-85af-a6d7d96045c8): SELECT id, plan_name, price, billing_cycle, max_users, max_invoices_per_month, max_products, storage_limit, features, is_active, created_at AS createdAt, updated_at AS updatedAt FROM plans AS Plan WHERE Plan.plan_name = 'Free Account' LIMIT 1;
+Executing (97065222-b173-44e2-85af-a6d7d96045c8): COMMIT;
+Executing (default): UPDATE plans SET price=$1,updated_at=$2 WHERE id = $3
+Executing (0fdc38f7-dc05-477f-9117-73d9b12a0945): START TRANSACTION;
+Executing (0fdc38f7-dc05-477f-9117-73d9b12a0945): SELECT id, plan_name, price, billing_cycle, max_users, max_invoices_per_month, max_products, storage_limit, features, is_active, created_at AS createdAt, updated_at AS updatedAt FROM plans AS Plan WHERE Plan.plan_name = 'Premium' LIMIT 1;
+Executing (0fdc38f7-dc05-477f-9117-73d9b12a0945): COMMIT;
+Executing (default): UPDATE plans SET price=$1,updated_at=$2 WHERE id = $3
+Executing (045b0ef8-2d9e-483f-add9-fa249d9c8876): START TRANSACTION;
+Executing (045b0ef8-2d9e-483f-add9-fa249d9c8876): SELECT id, plan_name, price, billing_cycle, max_users, max_invoices_per_month, max_products, storage_limit, features, is_active, created_at AS createdAt, updated_at AS updatedAt FROM plans AS Plan WHERE Plan.plan_name = 'Enterprise' LIMIT 1;
+Executing (045b0ef8-2d9e-483f-add9-fa249d9c8876): COMMIT;
+Executing (default): UPDATE plans SET price=$1,updated_at=$2 WHERE id = $3
+Executing (default): SELECT id, plan_name, price, billing_cycle, max_users, max_invoices_per_month, max_products, storage_limit, features, is_active, created_at AS createdAt, updated_at AS updatedAt FROM plans AS Plan WHERE Plan.plan_name = 'Free Account' LIMIT 1;
+Executing (default): SELECT id, plan_name, price, billing_cycle, max_users, max_invoices_per_month, max_products, storage_limit, features, is_active, created_at AS createdAt, updated_at AS updatedAt FROM plans AS Plan WHERE Plan.plan_name = 'Zero Account' LIMIT 1;
+Executing (default): SELECT id, plan_name, price, billing_cycle, max_users, max_invoices_per_month, max_products, storage_limit, features, is_active, created_at AS createdAt, updated_at AS updatedAt FROM plans AS Plan WHERE Plan.plan_name = 'Free' LIMIT 1;
+Plans seeded/updated successfully
+Executing (default): SELECT id, plan_name, price, billing_cycle, max_users, max_invoices_per_month, max_products, storage_limit, features, is_active, created_at AS createdAt, updated_at AS updatedAt FROM plans AS Plan WHERE Plan.plan_name = 'Free Account' LIMIT 1;
+Executing (default): UPDATE subscriptions SET plan_id=$1,expiry_date=$2,status=$3,updated_at=$4 WHERE expiry_date < '2026-03-22 14:05:57.553 +00:00' AND plan_id != '05774438-603b-4678-8158-7c8eef9ebb09'
+Executing (default): SELECT id, company_id, email, password, name, phone, role, permissions, is_active, email_verified, last_login, created_at AS createdAt, updated_at AS updatedAt FROM users AS "User";
+Executing (3cdd9de7-a1be-4365-99aa-44fb6f7030d0): START TRANSACTION;
+Executing (3cdd9de7-a1be-4365-99aa-44fb6f7030d0): SELECT id, user_id, company_id, role, created_at AS createdAt, updated_at AS updatedAt FROM usercompanies AS UserCompany WHERE UserCompany.user_id = '8c92abc2-83cd-4b93-a3e6-8ea86741457a' AND UserCompany.company_id = 'eb10ebda-bba4-402b-993c-0cf53de6d816' LIMIT 1;
+Executing (3cdd9de7-a1be-4365-99aa-44fb6f7030d0): COMMIT;
+Executing (115d6c08-d84b-4f66-ab10-ffccdc4465e1): START TRANSACTION;
+Executing (115d6c08-d84b-4f66-ab10-ffccdc4465e1): SELECT id, user_id, company_id, role, created_at AS createdAt, updated_at AS updatedAt FROM usercompanies AS UserCompany WHERE UserCompany.user_id = 'b94ed171-9b5c-47c8-a131-38b512a68379' AND UserCompany.company_id = '3007eb5b-0688-4b9a-9b6e-7a54c77fcc92' LIMIT 1;
+Executing (115d6c08-d84b-4f66-ab10-ffccdc4465e1): COMMIT;
+Executing (default): SELECT Company.id, Company.name, Company.gst_number, Company.address, Company.city, Company.state, Company.pincode, Company.phone, Company.email, Company.logo, Company.signature, Company.tagline, Company.business_category, Company.invoice_prefix, Company.currency, Company.financial_year_start, Company.bank_name, Company.account_number, Company.ifsc_code, Company.branch_name, Company.qr_code, Company.terms_conditions, Company.gst_registered, Company.enable_tds, Company.enable_tcs, Company.settings, Company.created_at AS createdAt, Company.updated_at AS updatedAt, Subscription.id AS "Subscription.id", Subscription.company_id AS "Subscription.company_id", Subscription.plan_id AS "Subscription.plan_id", Subscription.coupon_id AS "Subscription.coupon_id", Subscription.price AS "Subscription.price", Subscription.start_date AS "Subscription.start_date", Subscription.expiry_date AS "Subscription.expiry_date", Subscription.status AS "Subscription.status", Subscription.payment_status AS "Subscription.payment_status", Subscription.usage AS "Subscription.usage", Subscription.created_at AS "Subscription.createdAt", Subscription.updated_at AS "Subscription.updatedAt", Godowns.id AS "Godowns.id", Godowns.company_id AS "Godowns.company_id", Godowns.name AS "Godowns.name", Godowns.address AS "Godowns.address", Godowns.is_active AS "Godowns.is_active", Godowns.is_default AS "Godowns.is_default", Godowns.created_at AS "Godowns.createdAt", Godowns.updated_at AS "Godowns.updatedAt" FROM companies AS Company LEFT OUTER JOIN subscriptions AS Subscription ON Company.id = Subscription.company_id LEFT OUTER JOIN godowns AS Godowns ON Company.id = Godowns.company_id;
+Executing (default): SELECT id, plan_name, price, billing_cycle, max_users, max_invoices_per_month, max_products, storage_limit, features, is_active, created_at AS createdAt, updated_at AS updatedAt FROM plans AS Plan WHERE Plan.plan_name = 'Free Account' LIMIT 1;
+🚀 Server running on port 8001
+Charis is now powered by Gemini 3 Flash

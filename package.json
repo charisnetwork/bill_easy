@@ -1,0 +1,8 @@
+{
+  "name": "bill-easy-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/core-app/*",
+    "packages/admin-app/*"
+  ]
+}

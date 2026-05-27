@@ -1,0 +1,126 @@
+[dotenv@17.3.1] injecting env (14) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+Executing (default): SELECT 1+1 AS result
+Database connection established
+Executing (default): SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Plans'
+Executing (default): SELECT t.typname enum_name, array_agg(e.enumlabel ORDER BY enumsortorder) enum_value FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = 'public' AND t.typname='enum_Plans_billing_cycle' GROUP BY 1
+Executing (default): SELECT pk.constraint_type as "Constraint",c.column_name as "Field", c.column_default as "Default",c.is_nullable as "Null", (CASE WHEN c.udt_name = 'hstore' THEN c.udt_name ELSE c.data_type END) || (CASE WHEN c.character_maximum_length IS NOT NULL THEN '(' || c.character_maximum_length || ')' ELSE '' END) as "Type", (SELECT array_agg(e.enumlabel) FROM pg_catalog.pg_type t JOIN pg_catalog.pg_enum e ON t.oid=e.enumtypid WHERE t.typname=c.udt_name) AS "special", (SELECT pgd.description FROM pg_catalog.pg_statio_all_tables AS st INNER JOIN pg_catalog.pg_description pgd on (pgd.objoid=st.relid) WHERE c.ordinal_position=pgd.objsubid AND c.table_name=st.relname) AS "Comment" FROM information_schema.columns c LEFT JOIN (SELECT tc.table_schema, tc.table_name, cu.column_name, tc.constraint_type FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.KEY_COLUMN_USAGE  cu ON tc.table_schema=cu.table_schema and tc.table_name=cu.table_name and tc.constraint_name=cu.constraint_name and tc.constraint_type='PRIMARY KEY') pk ON pk.table_schema=c.table_schema AND pk.table_name=c.table_name AND pk.column_name=c.column_name WHERE c.table_name = 'Plans' AND c.table_schema = 'public'
+Executing (default): SELECT DISTINCT tc.constraint_name as constraint_name, tc.constraint_schema as constraint_schema, tc.constraint_catalog as constraint_catalog, tc.table_name as table_name,tc.table_schema as table_schema,tc.table_catalog as table_catalog,tc.initially_deferred as initially_deferred,tc.is_deferrable as is_deferrable,kcu.column_name as column_name,ccu.table_schema  AS referenced_table_schema,ccu.table_catalog  AS referenced_table_catalog,ccu.table_name  AS referenced_table_name,ccu.column_name AS referenced_column_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name = 'Plans' AND tc.table_catalog = 'mybillbook'
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "plan_name" SET NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "plan_name" DROP DEFAULT;ALTER TABLE "Plans" ALTER COLUMN "plan_name" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "price" DROP NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "price" SET DEFAULT 0;ALTER TABLE "Plans" ALTER COLUMN "price" TYPE DECIMAL(10,2);
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "createdAt" SET NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "createdAt" DROP DEFAULT;ALTER TABLE "Plans" ALTER COLUMN "createdAt" TYPE TIMESTAMP WITH TIME ZONE;
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "updatedAt" SET NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "updatedAt" DROP DEFAULT;ALTER TABLE "Plans" ALTER COLUMN "updatedAt" TYPE TIMESTAMP WITH TIME ZONE;
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "billing_cycle" DROP NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "billing_cycle" SET DEFAULT 'monthly';DO 'BEGIN CREATE TYPE "public"."enum_Plans_billing_cycle" AS ENUM(''monthly'', ''3month'', ''yearly'', ''lifetime''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "Plans" ALTER COLUMN "billing_cycle" TYPE "public"."enum_Plans_billing_cycle" USING ("billing_cycle"::"public"."enum_Plans_billing_cycle");
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "max_users" DROP NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "max_users" SET DEFAULT 1;ALTER TABLE "Plans" ALTER COLUMN "max_users" TYPE INTEGER;
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "max_invoices_per_month" DROP NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "max_invoices_per_month" SET DEFAULT 100;ALTER TABLE "Plans" ALTER COLUMN "max_invoices_per_month" TYPE INTEGER;
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "max_products" DROP NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "max_products" SET DEFAULT 100;ALTER TABLE "Plans" ALTER COLUMN "max_products" TYPE INTEGER;
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "storage_limit" DROP NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "storage_limit" SET DEFAULT 100;ALTER TABLE "Plans" ALTER COLUMN "storage_limit" TYPE INTEGER;
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "features" DROP NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "features" SET DEFAULT '{}';ALTER TABLE "Plans" ALTER COLUMN "features" TYPE JSON;
+Executing (default): ALTER TABLE "Plans" ALTER COLUMN "is_active" DROP NOT NULL;ALTER TABLE "Plans" ALTER COLUMN "is_active" SET DEFAULT true;ALTER TABLE "Plans" ALTER COLUMN "is_active" TYPE BOOLEAN;
+Executing (default): SELECT i.relname AS name, ix.indisprimary AS primary, ix.indisunique AS unique, ix.indkey AS indkey, array_agg(a.attnum) as column_indexes, array_agg(a.attname) AS column_names, pg_get_indexdef(ix.indexrelid) AS definition FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND t.relkind = 'r' and t.relname = 'Plans' GROUP BY i.relname, ix.indexrelid, ix.indisprimary, ix.indisunique, ix.indkey ORDER BY i.relname;
+Executing (default): SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Companies'
+Executing (default): SELECT pk.constraint_type as "Constraint",c.column_name as "Field", c.column_default as "Default",c.is_nullable as "Null", (CASE WHEN c.udt_name = 'hstore' THEN c.udt_name ELSE c.data_type END) || (CASE WHEN c.character_maximum_length IS NOT NULL THEN '(' || c.character_maximum_length || ')' ELSE '' END) as "Type", (SELECT array_agg(e.enumlabel) FROM pg_catalog.pg_type t JOIN pg_catalog.pg_enum e ON t.oid=e.enumtypid WHERE t.typname=c.udt_name) AS "special", (SELECT pgd.description FROM pg_catalog.pg_statio_all_tables AS st INNER JOIN pg_catalog.pg_description pgd on (pgd.objoid=st.relid) WHERE c.ordinal_position=pgd.objsubid AND c.table_name=st.relname) AS "Comment" FROM information_schema.columns c LEFT JOIN (SELECT tc.table_schema, tc.table_name, cu.column_name, tc.constraint_type FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.KEY_COLUMN_USAGE  cu ON tc.table_schema=cu.table_schema and tc.table_name=cu.table_name and tc.constraint_name=cu.constraint_name and tc.constraint_type='PRIMARY KEY') pk ON pk.table_schema=c.table_schema AND pk.table_name=c.table_name AND pk.column_name=c.column_name WHERE c.table_name = 'Companies' AND c.table_schema = 'public'
+Executing (default): SELECT DISTINCT tc.constraint_name as constraint_name, tc.constraint_schema as constraint_schema, tc.constraint_catalog as constraint_catalog, tc.table_name as table_name,tc.table_schema as table_schema,tc.table_catalog as table_catalog,tc.initially_deferred as initially_deferred,tc.is_deferrable as is_deferrable,kcu.column_name as column_name,ccu.table_schema  AS referenced_table_schema,ccu.table_catalog  AS referenced_table_catalog,ccu.table_name  AS referenced_table_name,ccu.column_name AS referenced_column_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name = 'Companies' AND tc.table_catalog = 'mybillbook'
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "name" SET NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "name" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "name" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "createdAt" SET NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "createdAt" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "createdAt" TYPE TIMESTAMP WITH TIME ZONE;
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "updatedAt" SET NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "updatedAt" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "updatedAt" TYPE TIMESTAMP WITH TIME ZONE;
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "gst_number" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "gst_number" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "gst_number" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "address" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "address" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "address" TYPE TEXT;
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "city" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "city" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "city" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "state" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "state" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "state" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "pincode" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "pincode" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "pincode" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "phone" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "phone" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "phone" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "email" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "email" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "email" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "logo" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "logo" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "logo" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "signature" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "signature" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "signature" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "tagline" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "tagline" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "tagline" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "business_category" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "business_category" SET DEFAULT 'General Store';ALTER TABLE "Companies" ALTER COLUMN "business_category" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "invoice_prefix" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "invoice_prefix" SET DEFAULT 'INV';ALTER TABLE "Companies" ALTER COLUMN "invoice_prefix" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "currency" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "currency" SET DEFAULT 'INR';ALTER TABLE "Companies" ALTER COLUMN "currency" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "financial_year_start" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "financial_year_start" SET DEFAULT 4;ALTER TABLE "Companies" ALTER COLUMN "financial_year_start" TYPE INTEGER;
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "bank_name" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "bank_name" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "bank_name" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "account_number" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "account_number" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "account_number" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "ifsc_code" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "ifsc_code" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "ifsc_code" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "branch_name" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "branch_name" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "branch_name" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "qr_code" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "qr_code" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "qr_code" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "terms_conditions" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "terms_conditions" DROP DEFAULT;ALTER TABLE "Companies" ALTER COLUMN "terms_conditions" TYPE TEXT;
+Executing (default): ALTER TABLE "Companies" ALTER COLUMN "settings" DROP NOT NULL;ALTER TABLE "Companies" ALTER COLUMN "settings" SET DEFAULT '{"invoice_template":"modern"}';ALTER TABLE "Companies" ALTER COLUMN "settings" TYPE JSON;
+Executing (default): SELECT i.relname AS name, ix.indisprimary AS primary, ix.indisunique AS unique, ix.indkey AS indkey, array_agg(a.attnum) as column_indexes, array_agg(a.attname) AS column_names, pg_get_indexdef(ix.indexrelid) AS definition FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND t.relkind = 'r' and t.relname = 'Companies' GROUP BY i.relname, ix.indexrelid, ix.indisprimary, ix.indisunique, ix.indkey ORDER BY i.relname;
+Executing (default): SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Users'
+Executing (default): SELECT t.typname enum_name, array_agg(e.enumlabel ORDER BY enumsortorder) enum_value FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = 'public' AND t.typname='enum_Users_role' GROUP BY 1
+Executing (default): SELECT pk.constraint_type as "Constraint",c.column_name as "Field", c.column_default as "Default",c.is_nullable as "Null", (CASE WHEN c.udt_name = 'hstore' THEN c.udt_name ELSE c.data_type END) || (CASE WHEN c.character_maximum_length IS NOT NULL THEN '(' || c.character_maximum_length || ')' ELSE '' END) as "Type", (SELECT array_agg(e.enumlabel) FROM pg_catalog.pg_type t JOIN pg_catalog.pg_enum e ON t.oid=e.enumtypid WHERE t.typname=c.udt_name) AS "special", (SELECT pgd.description FROM pg_catalog.pg_statio_all_tables AS st INNER JOIN pg_catalog.pg_description pgd on (pgd.objoid=st.relid) WHERE c.ordinal_position=pgd.objsubid AND c.table_name=st.relname) AS "Comment" FROM information_schema.columns c LEFT JOIN (SELECT tc.table_schema, tc.table_name, cu.column_name, tc.constraint_type FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.KEY_COLUMN_USAGE  cu ON tc.table_schema=cu.table_schema and tc.table_name=cu.table_name and tc.constraint_name=cu.constraint_name and tc.constraint_type='PRIMARY KEY') pk ON pk.table_schema=c.table_schema AND pk.table_name=c.table_name AND pk.column_name=c.column_name WHERE c.table_name = 'Users' AND c.table_schema = 'public'
+Executing (default): SELECT DISTINCT tc.constraint_name as constraint_name, tc.constraint_schema as constraint_schema, tc.constraint_catalog as constraint_catalog, tc.table_name as table_name,tc.table_schema as table_schema,tc.table_catalog as table_catalog,tc.initially_deferred as initially_deferred,tc.is_deferrable as is_deferrable,kcu.column_name as column_name,ccu.table_schema  AS referenced_table_schema,ccu.table_catalog  AS referenced_table_catalog,ccu.table_name  AS referenced_table_name,ccu.column_name AS referenced_column_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name = 'Users' AND tc.table_catalog = 'mybillbook'
+Executing (default): ALTER TABLE "Users" ALTER COLUMN "email" SET NOT NULL;ALTER TABLE "Users" ALTER COLUMN "email" DROP DEFAULT;ALTER TABLE "Users"  ADD UNIQUE ("email");ALTER TABLE "Users" ALTER COLUMN "email" TYPE VARCHAR(255)  ;
+Executing (default): ALTER TABLE "Users" ALTER COLUMN "name" SET NOT NULL;ALTER TABLE "Users" ALTER COLUMN "name" DROP DEFAULT;ALTER TABLE "Users" ALTER COLUMN "name" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Users" ALTER COLUMN "phone" DROP NOT NULL;ALTER TABLE "Users" ALTER COLUMN "phone" DROP DEFAULT;ALTER TABLE "Users" ALTER COLUMN "phone" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "Users" ALTER COLUMN "role" DROP NOT NULL;ALTER TABLE "Users" ALTER COLUMN "role" SET DEFAULT 'staff';DO 'BEGIN CREATE TYPE "public"."enum_Users_role" AS ENUM(''owner'', ''admin'', ''staff''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "Users" ALTER COLUMN "role" TYPE "public"."enum_Users_role" USING ("role"::"public"."enum_Users_role");
+Server startup failed: Error
+    at Query.run (/root/mybillbook/backend/node_modules/sequelize/lib/dialects/postgres/query.js:50:25)
+    at /root/mybillbook/backend/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async User.sync (/root/mybillbook/backend/node_modules/sequelize/lib/model.js:984:11)
+    at async Sequelize.sync (/root/mybillbook/backend/node_modules/sequelize/lib/sequelize.js:377:9)
+    at async startServer (/root/mybillbook/backend/server.js:261:5) {
+  name: 'SequelizeDatabaseError',
+  parent: error: default for column "role" cannot be cast automatically to type "enum_Users_role"
+      at parseErrorMessage (/root/mybillbook/backend/node_modules/pg-protocol/dist/parser.js:305:11)
+      at Parser.handlePacket (/root/mybillbook/backend/node_modules/pg-protocol/dist/parser.js:143:27)
+      at Parser.parse (/root/mybillbook/backend/node_modules/pg-protocol/dist/parser.js:37:38)
+      at Socket.<anonymous> (/root/mybillbook/backend/node_modules/pg-protocol/dist/index.js:11:42)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    length: 151,
+    severity: 'ERROR',
+    code: '42804',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'tablecmds.c',
+    line: '13243',
+    routine: 'ATExecAlterColumnType',
+    sql: `ALTER TABLE "Users" ALTER COLUMN "role" DROP NOT NULL;ALTER TABLE "Users" ALTER COLUMN "role" SET DEFAULT 'staff';DO 'BEGIN CREATE TYPE "public"."enum_Users_role" AS ENUM(''owner'', ''admin'', ''staff''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "Users" ALTER COLUMN "role" TYPE "public"."enum_Users_role" USING ("role"::"public"."enum_Users_role");`,
+    parameters: undefined
+  },
+  original: error: default for column "role" cannot be cast automatically to type "enum_Users_role"
+      at parseErrorMessage (/root/mybillbook/backend/node_modules/pg-protocol/dist/parser.js:305:11)
+      at Parser.handlePacket (/root/mybillbook/backend/node_modules/pg-protocol/dist/parser.js:143:27)
+      at Parser.parse (/root/mybillbook/backend/node_modules/pg-protocol/dist/parser.js:37:38)
+      at Socket.<anonymous> (/root/mybillbook/backend/node_modules/pg-protocol/dist/index.js:11:42)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    length: 151,
+    severity: 'ERROR',
+    code: '42804',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'tablecmds.c',
+    line: '13243',
+    routine: 'ATExecAlterColumnType',
+    sql: `ALTER TABLE "Users" ALTER COLUMN "role" DROP NOT NULL;ALTER TABLE "Users" ALTER COLUMN "role" SET DEFAULT 'staff';DO 'BEGIN CREATE TYPE "public"."enum_Users_role" AS ENUM(''owner'', ''admin'', ''staff''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "Users" ALTER COLUMN "role" TYPE "public"."enum_Users_role" USING ("role"::"public"."enum_Users_role");`,
+    parameters: undefined
+  },
+  sql: `ALTER TABLE "Users" ALTER COLUMN "role" DROP NOT NULL;ALTER TABLE "Users" ALTER COLUMN "role" SET DEFAULT 'staff';DO 'BEGIN CREATE TYPE "public"."enum_Users_role" AS ENUM(''owner'', ''admin'', ''staff''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "Users" ALTER COLUMN "role" TYPE "public"."enum_Users_role" USING ("role"::"public"."enum_Users_role");`,
+  parameters: {}
+}
