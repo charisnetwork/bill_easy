@@ -20,7 +20,7 @@ jobs:
 
       - name: Install Dependencies (Core Frontend)
         working-directory: packages/core-app/frontend
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Core Frontend
         working-directory: packages/core-app/frontend
@@ -35,7 +35,7 @@ jobs:
 
       - name: Install Dependencies (Admin Frontend)
         working-directory: packages/admin-app/frontend
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Admin Frontend
         working-directory: packages/admin-app/frontend
